@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "oceanembed"
+version = "0.1.0"
+description = "Satellite Embedding-Based Deep Learning Framework for Reconstruction of Subsurface Ocean Temperature"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "torch>=2.0.0",
+    "numpy>=1.24.0",
+    "xarray>=2023.1.0",
+    "netCDF4>=1.6.0",
+    "fastapi>=0.100.0",
+    "uvicorn>=0.22.0",
+    "pydantic>=2.0.0",
+    "pyyaml>=6.0",
+    "scipy>=1.10.0"
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = [".", "src"]

@@ -1,0 +1,37 @@
+# OceanEmbed3D Model Architecture Configuration
+model:
+  name: "OceanEmbed3D"
+  version: "0.1.0-dev"
+  target_region: "North Indian Ocean"
+  bbox:
+    min_lat: 5.0
+    max_lat: 30.0
+    min_lon: 45.0
+    max_lon: 105.0
+    res_deg: 0.25
+  grid:
+    height: 101
+    width: 241
+  in_channels: 7
+  temporal_window: 7
+  embedding_dim: 128
+  
+  # Architectural Modules & Ablation Switches
+  use_transformer: true
+  use_convlstm: true
+  use_cross_attention: true
+  use_depth_embedding: true
+  
+  # Hyperparameters
+  cnn_stem_channels: [64, 128, 128]
+  transformer_heads: 8
+  transformer_layers: 2
+  transformer_mlp_ratio: 4.0
+  convlstm_layers: 1
+  convlstm_kernel_size: 3
+  decoder_hidden_dims: [256, 128, 64]
+  
+  output_depths: [
+    0.0, 5.0, 10.0, 20.0, 30.0, 50.0, 75.0, 100.0,
+    125.0, 150.0, 200.0, 300.0, 500.0, 700.0, 1000.0
+  ]

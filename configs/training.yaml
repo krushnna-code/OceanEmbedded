@@ -1,0 +1,18 @@
+# OceanEmbed3D Training Configuration
+seed: 42
+device: "cpu"
+
+training:
+  epochs: 5
+  batch_size: 2
+  learning_rate: 1.0e-4
+  weight_decay: 1.0e-4
+  num_samples: 16
+  val_ratio: 0.25
+  checkpoint_dir: "checkpoints"
+
+loss:
+  loss_type: "huber"
+  huber_delta: 1.0
+  lambda_vertical: 0.01
+  lambda_spatial: 0.005
