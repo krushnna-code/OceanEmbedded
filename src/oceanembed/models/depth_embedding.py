@@ -59,6 +59,8 @@ class OceanDepthEmbedding(nn.Module):
         device = self.standard_depths.device
         if depth_indices is None:
             depth_indices = torch.arange(self.num_depths, device=device)
+        else:
+            depth_indices = depth_indices.to(device=device, dtype=torch.long)
             
         # Discrete embeddings
         disc = self.discrete_embed(depth_indices)

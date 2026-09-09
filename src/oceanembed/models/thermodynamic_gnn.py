@@ -112,7 +112,8 @@ class ThermodynamicGNN(nn.Module):
             
         h = self.input_proj(x)
         for layer in self.gnn_stack:
-            h = layer(h) + (h if h.shape[1] == layer.out_channels else 0)
+            h_out = layer(h)
+            h = h_out + h if h.shape[1] == h_out.shape[1] else h_out
             
         feat = self.downsample(h)
         

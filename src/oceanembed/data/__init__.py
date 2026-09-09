@@ -23,11 +23,13 @@ from oceanembed.data.graph_builder import (
     build_grid_graph,
     compute_expected_edge_count
 )
+from oceanembed.data.netcdf_dataset import NetCDFOceanDataset
 from oceanembed.data.regrid import PreprocessingService
 
 __all__ = [
     "SurfaceOceanDataset",
     "TemperatureTargetDataset",
+    "NetCDFOceanDataset",
     "STANDARD_DEPTHS",
     "SURFACE_VARIABLES",
     "BBOX_NORTH_INDIAN_OCEAN",

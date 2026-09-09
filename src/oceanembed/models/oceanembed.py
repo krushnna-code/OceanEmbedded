@@ -283,6 +283,7 @@ class OceanEmbed3D(BaseReconstructionModel):
                 mask = mask.unsqueeze(0).unsqueeze(0)  # [1, 1, H, W]
             elif mask.ndim == 3:
                 mask = mask.unsqueeze(1)               # [B, 1, H, W]
+            mask = mask.to(device=raw_output.device, dtype=raw_output.dtype)
             raw_output = raw_output * mask
             if sigma is not None:
                 sigma = sigma * mask

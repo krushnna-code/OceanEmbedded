@@ -1,6 +1,6 @@
 # OceanEmbed3D Training Configuration
 seed: 42
-device: "cpu"
+device: "cuda"
 
 training:
   epochs: 5

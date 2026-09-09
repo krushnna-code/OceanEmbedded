@@ -15,6 +15,7 @@ from torch.utils.data import DataLoader, random_split
 from oceanembed.utils.seed import seed_everything
 from oceanembed.models.oceanembed import OceanEmbed3D
 from oceanembed.data.synthetic import SyntheticOceanDataset
+from oceanembed.data.netcdf_dataset import NetCDFOceanDataset
 from oceanembed.training.losses import PhysicsAwareReconstructionLoss
 from oceanembed.training.validate import evaluate
 from oceanembed.training.checkpoint import save_checkpoint
@@ -56,7 +57,9 @@ def train_oceanembed(
                 "weight_decay": 1e-4,
                 "num_samples": 16,
                 "val_ratio": 0.25,
-                "checkpoint_dir": "checkpoints"
+                "checkpoint_dir": "checkpoints",
+                "dataset_type": "netcdf",
+                "data_dir": "training"
             },
             "loss": {
                 "loss_type": "huber",
@@ -87,24 +90,38 @@ def train_oceanembed(
     ).to(device)
     
     # 2. Dataset & Loaders
-    t_cfg = cfg["training"]
-    full_dataset = SyntheticOceanDataset(
-        num_samples=t_cfg.get("num_samples", 16),
-        seed=cfg.get("seed", 42)
-    )
+    t_cfg = cfg.get("training", {})
+    ds_type = t_cfg.get("dataset_type", "netcdf")
+    data_dir = t_cfg.get("data_dir", "training")
+
+    if ds_type == "netcdf" and os.path.exists(data_dir):
+        print(f"Loading real NetCDF dataset from '{data_dir}'...")
+        full_dataset = NetCDFOceanDataset(
+            data_dir=data_dir,
+            temporal_window=m_cfg.get("temporal_window", 7),
+            target_h=m_cfg.get("target_h", 101),
+            target_w=m_cfg.get("target_w", 241)
+        )
+    else:
+        print("Loading SyntheticOceanDataset...")
+        full_dataset = SyntheticOceanDataset(
+            num_samples=t_cfg.get("num_samples", 16),
+            seed=cfg.get("seed", 42)
+        )
+
     val_size = max(1, int(len(full_dataset) * t_cfg.get("val_ratio", 0.25)))
     train_size = len(full_dataset) - val_size
     train_ds, val_ds = random_split(full_dataset, [train_size, val_size])
     
     train_loader = DataLoader(
         train_ds,
-        batch_size=t_cfg.get("batch_size", 2),
+        batch_size=min(len(train_ds), t_cfg.get("batch_size", 2)),
         shuffle=True,
         drop_last=False
     )
     val_loader = DataLoader(
         val_ds,
-        batch_size=t_cfg.get("batch_size", 2),
+        batch_size=min(len(val_ds), t_cfg.get("batch_size", 2)),
         shuffle=False
     )
     
@@ -135,6 +152,7 @@ def train_oceanembed(
     # 4. Training Loop
     best_val_loss = float("inf")
     history = []
+    ckpt_path = ""
     
     print(f"Starting OceanEmbed training on {device} for {epochs} epochs...")
     for epoch in range(1, epochs + 1):
@@ -212,13 +230,54 @@ def train_oceanembed(
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train OceanEmbed3D Model")
     parser.add_argument("--config", type=str, default=None, help="Path to YAML config")
-    parser.add_argument("--epochs", type=int, default=3, help="Number of training epochs")
+    parser.add_argument("--dataset-type", type=str, default="netcdf", choices=["netcdf", "synthetic"], help="Dataset type")
+    parser.add_argument("--data-dir", type=str, default="training", help="Directory containing dataset files")
+    parser.add_argument("--epochs", type=int, default=5, help="Number of training epochs")
     args = parser.parse_args()
     
     cfg = None
     if args.config and os.path.exists(args.config):
         with open(args.config, "r") as f:
             cfg = yaml.safe_load(f)
-        if args.epochs:
-            cfg["training"]["epochs"] = args.epochs
+    else:
+        cfg = {
+            "seed": 42,
+            "device": "cuda" if torch.cuda.is_available() else "cpu",
+            "model": {
+                "in_channels": 7,
+                "temporal_window": 7,
+                "embedding_dim": 128,
+                "target_h": 101,
+                "target_w": 241,
+                "use_thermodynamic_branch": True,
+                "use_dynamic_branch": True,
+                "use_convlstm": True,
+                "use_cross_attention": True,
+                "use_uncertainty_head": True
+            },
+            "training": {
+                "epochs": args.epochs,
+                "batch_size": 2,
+                "learning_rate": 1e-4,
+                "weight_decay": 1e-4,
+                "checkpoint_dir": "checkpoints",
+                "dataset_type": args.dataset_type,
+                "data_dir": args.data_dir
+            },
+            "loss": {
+                "loss_type": "huber",
+                "huber_delta": 1.0,
+                "lambda_surface": 0.05,
+                "lambda_vertical": 0.05,
+                "lambda_thermocline": 0.1,
+                "lambda_uncertainty": 0.1
+            }
+        }
+    if args.epochs:
+        cfg["training"]["epochs"] = args.epochs
+    if args.dataset_type:
+        cfg["training"]["dataset_type"] = args.dataset_type
+    if args.data_dir:
+        cfg["training"]["data_dir"] = args.data_dir
+
     train_oceanembed(config=cfg)
