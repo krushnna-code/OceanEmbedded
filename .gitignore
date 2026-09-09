@@ -65,8 +65,8 @@ venv.bak/
 *.grb
 *.h5
 *.hdf5
-dataset/
-data/
+/dataset/
+/data/
 
 # Model checkpoints
 checkpoints/
