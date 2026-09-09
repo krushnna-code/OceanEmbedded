@@ -206,4 +206,42 @@ export interface MetricsData {
   protocol: string;
 }
 
+export interface TCHCRiskStats {
+  low_under_50: number;
+  moderate_50_to_80: number;
+  high_80_to_110: number;
+  extreme_over_110: number;
+}
+
+export interface SubBasinTCHCStats {
+  max_tchc_kj_cm2: number;
+  mean_tchc_kj_cm2: number;
+  mean_d26_m: number;
+  ri_potential_pct: number;
+  risk_status: string;
+}
+
+export interface TCHCData {
+  date: string;
+  status: string;
+  max_tchc_kj_cm2: number;
+  mean_warm_pool_tchc_kj_cm2: number;
+  mean_d26_m: number;
+  ri_hotspot_area_km2: number;
+  ri_hotspot_pct: number;
+  risk_categories: TCHCRiskStats;
+  sub_basin_stats: Record<string, SubBasinTCHCStats>;
+  tchc_values: (number | null)[][];
+  d26_values: (number | null)[][];
+  risk_grid: number[][];
+  latitude: number[];
+  longitude: number[];
+  units: {
+    tchc: string;
+    d26: string;
+  };
+  protocol: string;
+}
+
+
 

@@ -203,3 +203,38 @@ class MetricsResponseSchema(BaseModel):
     protocol: str
 
 
+class TCHCRiskCategoryStats(BaseModel):
+    low_under_50: int
+    moderate_50_to_80: int
+    high_80_to_110: int
+    extreme_over_110: int
+
+
+class SubBasinTCHCStats(BaseModel):
+    max_tchc_kj_cm2: float
+    mean_tchc_kj_cm2: float
+    mean_d26_m: float
+    ri_potential_pct: float
+    risk_status: str
+
+
+class TCHCResponseSchema(BaseModel):
+    date: str
+    status: str
+    max_tchc_kj_cm2: float
+    mean_warm_pool_tchc_kj_cm2: float
+    mean_d26_m: float
+    ri_hotspot_area_km2: float
+    ri_hotspot_pct: float
+    risk_categories: TCHCRiskCategoryStats
+    sub_basin_stats: Dict[str, SubBasinTCHCStats]
+    tchc_values: List[List[Optional[float]]]
+    d26_values: List[List[Optional[float]]]
+    risk_grid: List[List[int]]
+    latitude: List[float]
+    longitude: List[float]
+    units: Dict[str, str]
+    protocol: str
+
+
+

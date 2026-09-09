@@ -15,7 +15,8 @@ from backend.app.schemas.reconstruction import (
     EmbeddingSchema,
     ConfigResponseSchema,
     MetricsResponseSchema,
-    MHWResponseSchema
+    MHWResponseSchema,
+    TCHCResponseSchema
 )
 from oceanembed.services.reconstruction import ReconstructionService
 
@@ -209,6 +210,24 @@ def get_thermal_anomaly(
             is_anomaly=True
         )
         return ReconstructionMapSchema(**rec)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/api/tchc", response_model=TCHCResponseSchema)
+@router.get("/api/cyclone", response_model=TCHCResponseSchema)
+def get_tropical_cyclone_heat_content(
+    date: Optional[str] = Query(None, description="Observation date (YYYY-MM-DD)"),
+    model: str = Query("oceanembed-3d-v1", description="Model identifier")
+):
+    """
+    Computes Tropical Cyclone Heat Content (TCHC in kJ/cm²), 26°C Isotherm Depth (D26 in meters),
+    and evaluates Rapid Intensification (RI) risk across North Indian Ocean cyclogenesis basins.
+    """
+    svc = get_service()
+    try:
+        tchc = svc.get_tchc_analysis(date=date, model_id=model)
+        return TCHCResponseSchema(**tchc)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 

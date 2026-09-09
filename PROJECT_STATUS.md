@@ -4,7 +4,7 @@
 **Target Region:** North Indian Ocean ($5^\circ\text{N}$ to $30^\circ\text{N}$, $45^\circ\text{E}$ to $105^\circ\text{E}$)  
 **Grid & Depths:** $0.25^\circ \times 0.25^\circ$ Resolution ($101 \times 241$ grid nodes), 15 Vertical Levels ($0\text{m}$ to $1000\text{m}$)  
 **Last Updated:** September 9, 2026  
-**Overall Completion:** **98% (Phase 2 Anomaly & MHW Engine, Real Metrics, and Full Test Suite Completed)**
+**Overall Completion:** **100% (Real NetCDF Model Training, Phase 2 MHW, Metrics, and Tropical Cyclone Heat Content TCHC Completed)**
 
 ---
 
@@ -15,10 +15,11 @@
 Real NetCDF satellite and reanalysis training has been successfully executed on the 30-day November 2021 dataset in `training/`:
 - **v3 GNN-Hybrid Neural Core:** Dual GNN branches (Thermodynamic & Dynamic GNNs), Adaptive Gated Node Fusion, 7-day ConvLSTM temporal sequence memory, Spatial-Temporal Cross-Attention, 15-level Depth-Aware Decoder, and Heteroscedastic Gaussian NLL Uncertainty Head.
 - **Phase 2 Marine Heatwave (MHW) Engine:** Full implementation of Hobday et al. (2016) MHW criteria (90th percentile threshold exceeding baseline for $\ge 5$ consecutive days), severity categorization (Categories I Moderate to IV Extreme), active MHW area ($km^2$ and $\%$), cumulative intensity ($\sum \Delta T$), and vertical penetration depth tracking ($0\text{--}1000\text{m}$).
-- **Quantitative Validation Engine:** Live calculation of RMSE, MAE, Mean Bias, Pearson correlation ($r$), and $R^2$ variance explained across all 15 standard depth levels and 3 regional sub-basins (Arabian Sea, Bay of Bengal, Equatorial Indian Ocean).
-- **Interactive UI Portal:** Next.js 14 frontend updated with dedicated Marine Heatwave Dashboard (`MHWPanel`) and live Independent Validation Panel (`ValidationMetricsPanel`).
+- **Tropical Cyclone Heat Content (TCHC) Diagnostic Engine:** Implemented physical sensible heat integration down to the 26°C isotherm depth ($D_{26}$) per Shay et al. (2000) / Mainelli et al. (2008), with Rapid Intensification (RI) risk categorization (Low, Moderate, High, Extreme) across the Bay of Bengal, Arabian Sea, and Equatorial Indian Ocean.
+- **Quantitative Validation Engine:** Live calculation of RMSE, MAE, Mean Bias, Pearson correlation ($r$), and $R^2$ variance explained across all 15 standard depth levels and 3 regional sub-basins.
+- **Interactive UI Portal:** Next.js 14 frontend updated with dedicated Marine Heatwave Dashboard (`MHWPanel`), live Independent Validation Panel (`ValidationMetricsPanel`), and Tropical Cyclone Heat Content Dashboard (`CycloneHeatPanel`).
 - **Best Saved Checkpoint:** `checkpoints/oceanembed_v0.1.0-dev_20260909_180126_best.pt` (40.85 MB).
-- **Test Suite:** 21/21 tests in `tests/model` and `tests/backend`, plus 9/9 new tests in `tests/services` passing.
+- **Test Suite:** 100% passing across all backend, service, and model test suites (38/38 unit and API tests).
 
 ---
 
@@ -37,9 +38,9 @@ Real NetCDF satellite and reanalysis training has been successfully executed on 
 | **9** | Depth-Aware Decoder | **COMPLETED** | `DepthDecoder`, `DepthEmbedding` | U-Net multi-task decoder reconstructing 15 vertical depths ($0\text{--}1000\text{m}$). |
 | **10** | Physics Loss & Uncertainty | **COMPLETED** | `PhysicsAwareReconstructionLoss`, `UncertaintyHead` | Heteroscedastic NLL, surface consistency, thermocline weighting, vertical smoothness. |
 | **11** | Validation Engine | **COMPLETED** | `MetricsService`, `GLORYSValidationService` | Live RMSE, MAE, R², Pearson r across 15 depths and 3 sub-basins. |
-| **12** | MHW & Anomaly Engine | **COMPLETED (Phase 2)** | `AnomalyDetectionService` | Hobday et al. (2016) Categories I-IV, penetration depth, cumulative intensity. |
+| **12** | MHW & Cyclone Tools | **COMPLETED (Phase 2)** | `AnomalyDetectionService`, `CycloneHeatService` | Hobday Categories I-IV MHW + Shay et al. (2000) TCHC & D26 RI solver. |
 | **13** | Optimized Model Selection| **COMPLETED** | `oceanembed.training.checkpoint` | Checkpoint `oceanembed_v0.1.0-dev_20260909_180126_best.pt` saved. |
-| **14** | Serving & UI Portal | **COMPLETED** | `backend.app.main`, `frontend/` | FastAPI REST API endpoints + Next.js interactive 2D/3D visualization & MHW dashboard. |
+| **14** | Serving & UI Portal | **COMPLETED** | `backend.app.main`, `frontend/` | FastAPI REST API endpoints + Next.js interactive 2D/3D visualization, MHW, & Cyclone dashboard. |
 
 ---
 

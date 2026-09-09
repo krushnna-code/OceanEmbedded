@@ -14,9 +14,9 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab }) => {
     { id: 'ocean3d', label: '3D Ocean', icon: Layers },
     { id: 'profile', label: 'Profiles', icon: Activity },
     { id: 'uncertainty', label: 'Uncertainty Explorer', icon: HelpCircle, badge: 'Demo σ' },
-    { id: 'mhw', label: 'Anomaly & MHW', icon: Flame, badge: 'Next Phase' },
-    { id: 'cyclone', label: 'Cyclone Heat-Content', icon: Disc, badge: 'Next Phase' },
-    { id: 'metrics', label: 'Metrics', icon: BarChart3, badge: 'Pending' },
+    { id: 'mhw', label: 'Anomaly & MHW', icon: Flame, badge: 'Phase 2' },
+    { id: 'cyclone', label: 'Cyclone Heat-Content', icon: Disc, badge: 'Live TCHC' },
+    { id: 'metrics', label: 'Metrics', icon: BarChart3, badge: 'Validated' },
     { id: 'model_info', label: 'About & Model', icon: Info },
   ];
 

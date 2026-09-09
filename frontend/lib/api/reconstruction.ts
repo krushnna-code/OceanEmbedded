@@ -10,7 +10,8 @@ import {
   VerticalProfileData,
   Volume3DData,
   MetricsData,
-  MHWData
+  MHWData,
+  TCHCData
 } from '@/types/reconstruction';
 
 // Prefer relative proxy /api-backend (which rewrites to http://localhost:8000), fallback to direct origin
@@ -113,4 +114,20 @@ export async function fetchMHWData(
   }
   return res.json();
 }
+
+export async function fetchTCHCData(
+  date?: string,
+  model: string = 'oceanembed-3d-v1'
+): Promise<TCHCData> {
+  const params = new URLSearchParams();
+  if (date) params.append('date', date);
+  params.append('model', model);
+
+  const res = await fetch(`${API_BASE}/tchc?${params.toString()}`, { cache: 'no-store' });
+  if (!res.ok) {
+    throw new Error(`Failed to fetch TCHC analysis: ${res.status} ${res.statusText}`);
+  }
+  return res.json();
+}
+
 

@@ -9,6 +9,7 @@ import { OceanVolume3D } from '@/components/ocean3d/OceanVolume3D';
 import { ModelInfoPanel } from '@/components/info/ModelInfoPanel';
 import { MHWPanel } from '@/components/mhw/MHWPanel';
 import { ValidationMetricsPanel } from '@/components/metrics/ValidationMetricsPanel';
+import { CycloneHeatPanel } from '@/components/cyclone/CycloneHeatPanel';
 
 import {
   ConfigData,
@@ -273,31 +274,9 @@ export default function Home() {
           <MHWPanel selectedDate={selectedDate} depths={depths} />
         )}
 
-        {/* Tab 6: Cyclone Heat-Content Tool Placeholder */}
+        {/* Tab 6: Cyclone Heat-Content Diagnostic Tool */}
         {activeTab === 'cyclone' && (
-          <div className="gov-card">
-            <div className="gov-card-header">
-              <div className="gov-card-title">
-                <span>Tropical Cyclone Heat-Content (TCHC) Diagnostic Tool</span>
-              </div>
-              <span className="status-tag" style={{ background: '#fef3c7', color: '#b45309', border: '1px solid #fde68a' }}>
-                COMING IN NEXT INTEGRATION PHASE
-              </span>
-            </div>
-            <div className="gov-card-body" style={{ textAlign: 'center', padding: '3.5rem 1.5rem' }}>
-              <div style={{ maxWidth: '600px', margin: '0 auto' }}>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#0f2744', marginBottom: '0.6rem' }}>
-                  Integrated Ocean Thermal Energy for Cyclone Intensification
-                </h3>
-                <p style={{ fontSize: '0.82rem', color: '#475569', lineHeight: 1.6, marginBottom: '1.25rem' }}>
-                  TCHC integrates oceanic sensible heat from the sea surface down to the 26°C isotherm depth ($D_{26}$). This tool will calculate operational TCHC maps ($kJ/cm^2$) across the Bay of Bengal and Arabian Sea post-cyclone season in Phase 2.
-                </p>
-                <div style={{ display: 'inline-block', background: '#f1f5f9', padding: '0.6rem 1.25rem', borderRadius: '4px', fontSize: '0.78rem', fontWeight: 600, color: '#1e3a5f', border: '1px solid #cbd5e1' }}>
-                  Scheduled: Integration Phase 2 (Oceanographic Diagnostic Tools)
-                </div>
-              </div>
-            </div>
-          </div>
+          <CycloneHeatPanel selectedDate={selectedDate} />
         )}
 
         {/* Tab 7: Model Specifications & Architecture */}

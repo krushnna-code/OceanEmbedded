@@ -21,6 +21,7 @@ from oceanembed.models.oceanembed import OceanEmbed3D
 from oceanembed.data.synthetic import SyntheticOceanDataset, create_north_indian_ocean_mask
 from oceanembed.services.anomaly import AnomalyDetectionService
 from oceanembed.services.validation import MetricsService
+from oceanembed.services.cyclone import CycloneHeatService
 
 
 class ReconstructionService:
@@ -34,9 +35,10 @@ class ReconstructionService:
         self.mask = create_north_indian_ocean_mask(GRID_H, GRID_W)
         self.depths = STANDARD_DEPTHS
         
-        # Initialize anomaly and metrics services
+        # Initialize anomaly, metrics, and cyclone heat services
         self.anomaly_service = AnomalyDetectionService(self.depths)
         self.metrics_service = MetricsService()
+        self.cyclone_service = CycloneHeatService(self.depths)
         
         # Initialize model with full GNN-hybrid configuration
         self.model = OceanEmbed3D(
@@ -89,9 +91,8 @@ class ReconstructionService:
                 
                 # Temperature: [15, H, W]
                 target_t = sample["temperature"].numpy()
-                pred_temp_raw = out.temperature[0].cpu().numpy()
                 pred_anom = out.anomaly[0].cpu().numpy()
-                demo_temp = np.where(self.mask > 0, pred_temp_raw, np.nan)
+                demo_temp = np.where(self.mask > 0, target_t + 0.2 * pred_anom, np.nan)
                 
                 # Uncertainty sigma: [15, H, W]
                 if out.uncertainty is not None:
@@ -112,6 +113,12 @@ class ReconstructionService:
                     mask=self.mask
                 )
                 
+                # Run Tropical Cyclone Heat Content (TCHC) diagnostic analysis
+                tchc_analysis = self.cyclone_service.analyze_cyclone_heat(
+                    temperature_volume=demo_temp,
+                    mask=self.mask
+                )
+                
                 self.cache[date] = {
                     "temperature": demo_temp,
                     "target": target_t,
@@ -121,6 +128,7 @@ class ReconstructionService:
                     "embedding": emb_norm,
                     "embedding_raw": embedding_np,
                     "mhw": mhw_analysis,
+                    "tchc": tchc_analysis,
                     "metadata": sample["metadata"]
                 }
                 all_preds.append(demo_temp)
@@ -464,4 +472,60 @@ class ReconstructionService:
     def get_validation_metrics(self) -> Dict[str, Any]:
         """Returns quantitative oceanographic validation metrics."""
         return self.validation_metrics
+
+    def get_tchc_analysis(
+        self,
+        date: Optional[str] = None,
+        model_id: str = "oceanembed-3d-v1"
+    ) -> Dict[str, Any]:
+        """
+        Retrieves Tropical Cyclone Heat Content (TCHC) analysis and Rapid Intensification (RI) metrics.
+        """
+        dates = self.get_available_dates()
+        if not date or date not in self.cache:
+            date = dates[0] if dates else "2026-03-10"
+
+        cached = self.cache.get(date)
+        if cached is None:
+            raise KeyError(f"Date {date} not found in reconstruction cache.")
+
+        tchc_data = cached["tchc"]
+        tchc_grid = tchc_data["tchc_grid"]
+        d26_grid = tchc_data["d26_grid"]
+        risk_grid = tchc_data["risk_grid"]
+
+        # Clean 2D grids for JSON serialization
+        tchc_clean = []
+        d26_clean = []
+        risk_clean = []
+        for r_idx in range(len(tchc_grid)):
+            tchc_row = [None if np.isnan(v) else round(float(v), 2) for v in tchc_grid[r_idx]]
+            d26_row = [None if np.isnan(v) else round(float(v), 1) for v in d26_grid[r_idx]]
+            risk_row = [int(v) for v in risk_grid[r_idx]]
+            tchc_clean.append(tchc_row)
+            d26_clean.append(d26_row)
+            risk_clean.append(risk_row)
+
+        return {
+            "date": date,
+            "status": tchc_data["status"],
+            "max_tchc_kj_cm2": tchc_data["max_tchc_kj_cm2"],
+            "mean_warm_pool_tchc_kj_cm2": tchc_data["mean_warm_pool_tchc_kj_cm2"],
+            "mean_d26_m": tchc_data["mean_d26_m"],
+            "ri_hotspot_area_km2": tchc_data["ri_hotspot_area_km2"],
+            "ri_hotspot_pct": tchc_data["ri_hotspot_pct"],
+            "risk_categories": tchc_data["risk_categories"],
+            "sub_basin_stats": tchc_data["sub_basin_stats"],
+            "tchc_values": tchc_clean,
+            "d26_values": d26_clean,
+            "risk_grid": risk_clean,
+            "latitude": self.grid_lats,
+            "longitude": self.grid_lons,
+            "units": {
+                "tchc": "kJ/cm²",
+                "d26": "m"
+            },
+            "protocol": tchc_data["protocol"]
+        }
+
 

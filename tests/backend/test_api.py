@@ -117,6 +117,19 @@ def test_anomaly_endpoint():
     assert len(data["values"]) == 101
 
 
+def test_tchc_endpoint():
+    response = client.get("/api/tchc")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "success"
+    assert "max_tchc_kj_cm2" in data
+    assert "mean_d26_m" in data
+    assert "ri_hotspot_area_km2" in data
+    assert "Bay of Bengal" in data["sub_basin_stats"]
+    assert len(data["tchc_values"]) == 101
+    assert len(data["tchc_values"][0]) == 241
+
+
 def test_inference_endpoints():
     payload = {"date": "2026-03-10", "depth": 50.0, "is_anomaly": False}
     # Test /api/inference
@@ -126,5 +139,6 @@ def test_inference_endpoints():
     r2 = client.post("/predict", json=payload)
     assert r2.status_code == 200
     assert r2.json()["status"] == "success"
+
 
 

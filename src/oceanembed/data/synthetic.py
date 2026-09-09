@@ -82,10 +82,11 @@ def generate_synthetic_profile(depths: List[float], surface_sst: float) -> np.nd
     # Physical decay formulation for tropical ocean
     deep_t = 4.5
     delta_t = surface_sst - deep_t
-    thermocline_depth = 120.0
-    scale = 160.0
+    thermocline_depth = 100.0
+    scale = 100.0
+    norm_factor = 1.0 + np.exp(-thermocline_depth / scale)
     
-    profile = deep_t + delta_t / (1.0 + np.exp((d - thermocline_depth) / scale))
+    profile = deep_t + delta_t * (norm_factor / (1.0 + np.exp((d - thermocline_depth) / scale)))
     return profile
 
 
@@ -162,12 +163,13 @@ class SyntheticOceanDataset(SurfaceOceanDataset, TemperatureTargetDataset):
             last_sst = surface[-1, 0]
             
             for k, depth in enumerate(STANDARD_DEPTHS):
-                # Standard profile decay
+                # Standard profile decay calibrated to surface SST
                 deep_t = 4.5
                 delta_t = np.maximum(last_sst - deep_t, 5.0)
-                thermocline_depth = 120.0
-                scale = 160.0
-                decay = deep_t + delta_t / (1.0 + np.exp((depth - thermocline_depth) / scale))
+                thermocline_depth = 100.0
+                scale = 100.0
+                norm_factor = 1.0 + np.exp(-thermocline_depth / scale)
+                decay = deep_t + delta_t * (norm_factor / (1.0 + np.exp((depth - thermocline_depth) / scale)))
                 
                 # Subsurface eddy signal decays with depth
                 depth_eddy_decay = np.exp(-depth / 350.0)
