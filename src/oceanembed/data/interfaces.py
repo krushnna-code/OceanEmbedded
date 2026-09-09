@@ -59,6 +59,11 @@ class SurfaceOceanDataset(Dataset):
             {
                 "surface": torch.Tensor of shape [T, C, H, W], dtype=torch.float32,
                 "mask": Optional[torch.Tensor] of shape [H, W] (1=ocean, 0=land),
+                "graph": {
+                    "node_features": Optional[torch.Tensor], # [B*T, N, C]
+                    "edge_index": Optional[torch.Tensor],    # [2, num_edges]
+                    "edge_weight": Optional[torch.Tensor]
+                },
                 "metadata": Dict[str, Any] (dates, timestamps, coords)
             }
         """

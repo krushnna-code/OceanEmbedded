@@ -13,6 +13,8 @@ interface ControlsProps {
   isAnomaly: boolean;
   onAnomalyChange: (anomaly: boolean) => void;
   selectedModel: string;
+  showUncertainty?: boolean;
+  onShowUncertaintyChange?: (show: boolean) => void;
 }
 
 export const ReconstructionControls: React.FC<ControlsProps> = ({
@@ -25,6 +27,8 @@ export const ReconstructionControls: React.FC<ControlsProps> = ({
   isAnomaly,
   onAnomalyChange,
   selectedModel,
+  showUncertainty = false,
+  onShowUncertaintyChange,
 }) => {
   const depthPresets = [
     { label: 'Surface (0m)', val: 0.0 },
@@ -46,9 +50,9 @@ export const ReconstructionControls: React.FC<ControlsProps> = ({
         </div>
       </div>
 
-      <div className="gov-card-body" style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', alignItems: 'flex-end' }}>
+      <div className="gov-card-body" style={{ display: 'flex', flexWrap: 'wrap', gap: '1.25rem', alignItems: 'flex-end' }}>
         {/* Date Selector */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', minWidth: '160px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', minWidth: '150px' }}>
           <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#334155', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
             <Calendar size={14} color="#0284c7" />
             <span>Observation Date</span>
@@ -67,7 +71,7 @@ export const ReconstructionControls: React.FC<ControlsProps> = ({
         </div>
 
         {/* Depth Selector */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', minWidth: '170px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', minWidth: '165px' }}>
           <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#334155', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
             <Gauge size={14} color="#0284c7" />
             <span>Depth Level</span>
@@ -95,8 +99,8 @@ export const ReconstructionControls: React.FC<ControlsProps> = ({
             <button
               onClick={() => onAnomalyChange(false)}
               style={{
-                padding: '0.42rem 0.85rem',
-                fontSize: '0.8rem',
+                padding: '0.42rem 0.75rem',
+                fontSize: '0.78rem',
                 fontWeight: 600,
                 border: 'none',
                 background: !isAnomaly ? '#0284c7' : '#ffffff',
@@ -104,13 +108,13 @@ export const ReconstructionControls: React.FC<ControlsProps> = ({
                 transition: 'all 0.15s ease'
               }}
             >
-              Absolute Temperature (°C)
+              Temperature
             </button>
             <button
               onClick={() => onAnomalyChange(true)}
               style={{
-                padding: '0.42rem 0.85rem',
-                fontSize: '0.8rem',
+                padding: '0.42rem 0.75rem',
+                fontSize: '0.78rem',
                 fontWeight: 600,
                 border: 'none',
                 background: isAnomaly ? '#0284c7' : '#ffffff',
@@ -119,26 +123,51 @@ export const ReconstructionControls: React.FC<ControlsProps> = ({
                 transition: 'all 0.15s ease'
               }}
             >
-              Anomaly (°C)
+              Anomaly
             </button>
           </div>
         </div>
 
+        {/* Uncertainty Overlay Toggle */}
+        {onShowUncertaintyChange && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#334155' }}>
+              Uncertainty Head
+            </span>
+            <button
+              onClick={() => onShowUncertaintyChange(!showUncertainty)}
+              style={{
+                padding: '0.42rem 0.75rem',
+                fontSize: '0.78rem',
+                fontWeight: 600,
+                border: '1px solid #c084fc',
+                borderRadius: '3px',
+                background: showUncertainty ? '#9333ea' : '#faf5ff',
+                color: showUncertainty ? '#ffffff' : '#7e22ce',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              {showUncertainty ? 'Showing σ Field' : 'Show Uncertainty (σ)'}
+            </button>
+          </div>
+        )}
+
         {/* Model ID Display */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', minWidth: '150px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', minWidth: '160px' }}>
           <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#334155' }}>
             Reconstruction Engine
           </span>
           <div style={{
-            padding: '0.45rem 0.75rem',
-            fontSize: '0.82rem',
+            padding: '0.42rem 0.75rem',
+            fontSize: '0.78rem',
             fontWeight: 600,
             background: '#f1f5f9',
             border: '1px solid #e2e8f0',
             borderRadius: '3px',
             color: '#0f2744'
           }}>
-            OceanEmbed3D (v0.1.0)
+            OceanEmbed GNN-Hybrid
           </div>
         </div>
 

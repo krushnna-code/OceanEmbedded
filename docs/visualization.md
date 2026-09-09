@@ -51,32 +51,47 @@ The 3D viewer represents the North Indian Ocean as a 3D volumetric block with ax
 ## 3. Vertical Subsurface Profile Explorer
 
 - **Graph**: Inverted depth profile graph (Y-axis: $0\text{m}$ at surface down to $1000\text{m}$ at bottom).
-- **Physical Zones**: Highlights the mixed layer ($0\text{--}30\text{m}$) and thermocline zone ($50\text{--}200\text{m}$).
-- **Table**: Full numerical breakdown of all 15 depths with temperature (°C) and anomaly values.
+- **Thermocline Layer Shading**: Highlights the critical $50\text{m}\text{--}200\text{m}$ thermocline zone with soft cyan tinting.
+- **Uncertainty Band ($\mu \pm \sigma$)**: Shaded polygon enclosing the point prediction $\mu$ with the model's predicted spread $\sigma$, rendered in translucent violet (`rgba(147, 51, 234, 0.18)`).
+- **Table**: Full numerical breakdown of all 15 standard depths with temperature (°C), uncertainty ($\sigma$), and anomaly values.
+- **Scientific Labeling**: Explicitly states: *"Model development demo $\sigma$ (internal training signal, not validated confidence interval)."*
 - **Validation Notice**: Transparently flags that independent in-situ ARGO float comparison is *"Validation pending"* in this development phase.
 
 ---
 
-## 4. Shared State Synchronization
+## 4. Heteroscedastic Uncertainty Explorer
+
+- **Dedicated View**: Accessible via the "Uncertainty Explorer" navigation tab and via the "Show Uncertainty (σ)" toggle on the reconstruction dashboard.
+- **Distinct Non-Alarming Palette**: Maps internal $\sigma$ values using an indigo $\to$ violet $\to$ magenta $\to$ cyan gradient, strictly avoiding red/yellow warning connotations.
+- **Purpose**: Displays the spatial variation of model certainty—revealing where high frontal variability or missing observations naturally produce wider predicted spreads.
+- **Prominent Disclaimers**: Labeled `DEMO / MODEL DEVELOPMENT DATA` with a banner emphasizing that $\sigma$ is an internal signal from the Gaussian NLL loss head.
+
+---
+
+## 5. Shared State Synchronization
 
 The application maintains a single unified state model across all views:
 
 ```text
-       ┌──────────────────────┐
-       │   Central State      │
-       │                      │
-       │  - selectedDate      │
-       │  - selectedDepth     │
-       │  - selectedLat       │
-       │  - selectedLon       │
-       │  - isAnomaly         │
-       └──────────┬───────────┘
-                  │
-     ┌────────────┼────────────┐
-     ▼            ▼            ▼
- 2D Map       3D Volume    Profile Panel
-(Horizontal)   (WebGL)      (Vertical)
+       ┌──────────────────────────────┐
+       │        Central State         │
+       │                              │
+       │  - selectedDate              │
+       │  - selectedDepth             │
+       │  - selectedLat               │
+       │  - selectedLon               │
+       │  - isAnomaly                 │
+       │  - showUncertainty           │
+       │  - activeTab                 │
+       └──────────────┬───────────────┘
+                      │
+     ┌────────────────┼────────────────┬────────────────┐
+     ▼                ▼                ▼                ▼
+  2D Map          3D Volume      Profile Panel    Uncertainty
+(Horizontal)       (WebGL)         (Vertical)       Explorer
 ```
 
 - Clicking on the 2D map at `(12.50°N, 82.25°E)` moves the 3D probe and refreshes the vertical profile graph.
-- Selecting a depth (e.g. `200m`) updates the 2D map slice, the 3D layer highlight, and the profile table cursor.
+- Selecting a depth (e.g. `100m`) updates the 2D map slice, the 3D layer highlight, and the profile table cursor.
+- Toggling uncertainty activates the dedicated $\sigma$ field across both 2D horizontal slices and profile bands.
+

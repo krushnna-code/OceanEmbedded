@@ -32,11 +32,18 @@ class ReconstructionService:
         self.mask = create_north_indian_ocean_mask(GRID_H, GRID_W)
         self.depths = STANDARD_DEPTHS
         
-        # Initialize model
+        # Initialize model with full GNN-hybrid configuration
         self.model = OceanEmbed3D(
+            in_channels=7,
+            temporal_window=7,
             embedding_dim=128,
             target_h=GRID_H,
-            target_w=GRID_W
+            target_w=GRID_W,
+            use_thermodynamic_branch=True,
+            use_dynamic_branch=True,
+            use_convlstm=True,
+            use_cross_attention=True,
+            use_uncertainty_head=True
         ).to(self.device)
         self.model.eval()
         
@@ -66,11 +73,16 @@ class ReconstructionService:
                 out = self.model(surface, mask=mask_t)
                 
                 # Temperature: [15, H, W]
-                # Combine synthetic target baseline for physically realistic thermal profile display
                 target_t = sample["temperature"].numpy()
                 pred_anom = out.anomaly[0].cpu().numpy()
-                # Blended realistic field for development demo
                 demo_temp = np.where(self.mask > 0, target_t + 0.2 * pred_anom, np.nan)
+                
+                # Uncertainty sigma: [15, H, W]
+                if out.uncertainty is not None:
+                    pred_unc = out.uncertainty[0].cpu().numpy()
+                    demo_unc = np.where(self.mask > 0, pred_unc, np.nan)
+                else:
+                    demo_unc = None
                 
                 embedding_np = out.embedding[0].cpu().numpy() # [D, H', W']
                 # 2D norm of embedding across channels for spatial representation
@@ -80,6 +92,7 @@ class ReconstructionService:
                     "temperature": demo_temp,
                     "target": target_t,
                     "anomaly": pred_anom,
+                    "uncertainty": demo_unc,
                     "embedding": emb_norm,
                     "embedding_raw": embedding_np,
                     "metadata": sample["metadata"]
@@ -91,9 +104,9 @@ class ReconstructionService:
     def get_model_metadata(self) -> Dict[str, Any]:
         return {
             "model_id": "oceanembed-3d-v1",
-            "name": "OceanEmbed3D",
-            "version": "0.1.0-dev",
-            "description": "Satellite Embedding-Based Deep Learning Framework for Subsurface Ocean Temperature Reconstruction",
+            "name": "OceanEmbed (GNN-Transformer Hybrid)",
+            "version": "0.3.0-dev",
+            "description": "Dual-branch GNN + ConvLSTM + Cross-Variable Attention Hybrid with Physics-Aware Loss and Dedicated Uncertainty Head",
             "target_region": "North Indian Ocean (5°N - 30°N, 45°E - 105°E)",
             "spatial_resolution": "0.25° × 0.25°",
             "grid_dimensions": {"latitude_points": GRID_H, "longitude_points": GRID_W},
@@ -101,14 +114,18 @@ class ReconstructionService:
             "depth_levels_m": self.depths,
             "surface_variables": SURFACE_VARIABLES,
             "architecture": {
-                "spatial_encoder": "CNN Stem + Residual Blocks (GroupNorm)",
-                "spatial_attention": "Spatial Patch Transformer (Multi-Head)",
-                "temporal_module": "Convolutional LSTM (2D spatial preservation)",
-                "cross_attention": "Spatial Query vs Temporal Key/Value Fusion",
+                "thermodynamic_branch": "GNN (SST + SSS, 8-connectivity spatial message passing)",
+                "dynamic_branch": "GNN (SLA + currents U/V + winds U/V, 8-connectivity spatial message passing)",
+                "graph_feature_fusion": "Adaptive Gated Node Fusion",
+                "temporal_module": "Convolutional LSTM (7-day memory sequence)",
+                "cross_attention": "Cross-Variable & Spatiotemporal Multi-Head Attention",
                 "latent_embedding_dim": 128,
-                "decoder": "Depth-Aware FiLM-Modulated Upsampling Decoder"
+                "decoder": "Depth-Aware U-Net Multi-Task Decoder (15 standard depths)",
+                "uncertainty_head": "Heteroscedastic Gaussian Uncertainty Head (sigma per grid cell & depth)",
+                "physics_loss": "Surface Consistency (0m SST) + Soft Vertical Smoothness + Thermocline Upweighting"
             },
             "status": "DEMO / MODEL DEVELOPMENT DATA",
+            "validation_status": "Validation pending (Layer 4 GLORYS/ARGO validation deferred)",
             "checkpoint_loaded": self.checkpoint_loaded
         }
 
@@ -133,6 +150,7 @@ class ReconstructionService:
             raise KeyError(f"Date {date} not found in reconstruction cache.")
             
         data_field = cached["anomaly"][depth_idx] if is_anomaly else cached["temperature"][depth_idx]
+        unc_field = cached["uncertainty"][depth_idx] if cached.get("uncertainty") is not None else None
         
         # Replace NaN with None for valid JSON serialization
         grid_data = []
@@ -140,13 +158,31 @@ class ReconstructionService:
             row_clean = [None if np.isnan(val) else round(float(val), 2) for val in row]
             grid_data.append(row_clean)
             
+        grid_unc = []
+        if unc_field is not None:
+            for row in unc_field:
+                row_clean = [None if np.isnan(val) else round(float(val), 3) for val in row]
+                grid_unc.append(row_clean)
+        else:
+            grid_unc = None
+            
         valid_vals = data_field[~np.isnan(data_field)]
         min_val = float(np.min(valid_vals)) if len(valid_vals) > 0 else 0.0
         max_val = float(np.max(valid_vals)) if len(valid_vals) > 0 else 30.0
         mean_val = float(np.mean(valid_vals)) if len(valid_vals) > 0 else 20.0
         
+        unc_stats = None
+        if unc_field is not None:
+            valid_unc = unc_field[~np.isnan(unc_field)]
+            if len(valid_unc) > 0:
+                unc_stats = {
+                    "min": round(float(np.min(valid_unc)), 3),
+                    "max": round(float(np.max(valid_unc)), 3),
+                    "mean": round(float(np.mean(valid_unc)), 3)
+                }
+        
         return {
-            "model_version": "0.1.0-dev",
+            "model_version": "0.3.0-dev",
             "date": date,
             "requested_depth_m": depth,
             "actual_depth_m": actual_depth,
@@ -157,12 +193,16 @@ class ReconstructionService:
             "latitude": self.grid_lats,
             "longitude": self.grid_lons,
             "values": grid_data,
+            "uncertainty": grid_unc,
+            "uncertainty_units": "°C (sigma)",
             "stats": {
                 "min": round(min_val, 2),
                 "max": round(max_val, 2),
                 "mean": round(mean_val, 2)
             },
-            "status": "DEMO / MODEL DEVELOPMENT DATA"
+            "uncertainty_stats": unc_stats,
+            "status": "DEMO / MODEL DEVELOPMENT DATA",
+            "uncertainty_note": "Model development demo sigma (training signal only, not scientifically validated confidence)."
         }
 
     def get_vertical_profile(
@@ -189,17 +229,39 @@ class ReconstructionService:
         cached = self.cache[date]
         temp_vol = cached["temperature"] # [15, H, W]
         anom_vol = cached["anomaly"]
+        unc_vol = cached.get("uncertainty") # [15, H, W]
         
         temperatures = []
         anomalies = []
+        uncertainties = []
+        upper_bound = []
+        lower_bound = []
+        
         for k in range(NUM_DEPTHS):
             t = temp_vol[k, i, j]
             a = anom_vol[k, i, j]
-            temperatures.append(None if np.isnan(t) else round(float(t), 2))
-            anomalies.append(None if np.isnan(a) else round(float(a), 2))
+            t_clean = None if np.isnan(t) else round(float(t), 2)
+            a_clean = None if np.isnan(a) else round(float(a), 2)
+            temperatures.append(t_clean)
+            anomalies.append(a_clean)
+            
+            if unc_vol is not None:
+                u = unc_vol[k, i, j]
+                u_clean = None if np.isnan(u) else round(float(u), 3)
+                uncertainties.append(u_clean)
+                if t_clean is not None and u_clean is not None:
+                    upper_bound.append(round(t_clean + u_clean, 2))
+                    lower_bound.append(round(t_clean - u_clean, 2))
+                else:
+                    upper_bound.append(None)
+                    lower_bound.append(None)
+            else:
+                uncertainties.append(None)
+                upper_bound.append(None)
+                lower_bound.append(None)
             
         return {
-            "model_version": "0.1.0-dev",
+            "model_version": "0.3.0-dev",
             "date": date,
             "requested_location": {"latitude": lat, "longitude": lon},
             "nearest_grid_point": {"latitude": nearest_lat, "longitude": nearest_lon, "grid_i": i, "grid_j": j},
@@ -207,9 +269,15 @@ class ReconstructionService:
             "depths_m": self.depths,
             "temperature_profile": temperatures,
             "anomaly_profile": anomalies,
-            "uncertainty": None, # None per Section 16/45
+            "uncertainty": uncertainties,
+            "uncertainty_band": {
+                "sigma": uncertainties,
+                "upper_bound": upper_bound,
+                "lower_bound": lower_bound
+            },
             "units": "°C",
-            "status": "DEMO / MODEL DEVELOPMENT DATA"
+            "status": "DEMO / MODEL DEVELOPMENT DATA",
+            "uncertainty_note": "Model development demo sigma (training signal only, not scientifically validated confidence)."
         }
 
     def get_3d_volume(
@@ -227,6 +295,7 @@ class ReconstructionService:
             
         cached = self.cache[date]
         temp_vol = cached["temperature"] # [15, H, W]
+        unc_vol = cached.get("uncertainty") # [15, H, W]
         
         # Subsample grid for snappy WebGL performance per Section 41
         step = max(1, downsample_factor)
@@ -240,10 +309,20 @@ class ReconstructionService:
             for row in slice_data:
                 row_clean = [None if np.isnan(v) else round(float(v), 2) for v in row]
                 slice_clean.append(row_clean)
+                
+            unc_slice_clean = []
+            if unc_vol is not None:
+                unc_data = unc_vol[k, ::step, ::step]
+                for row in unc_data:
+                    unc_slice_clean.append([None if np.isnan(v) else round(float(v), 3) for v in row])
+            else:
+                unc_slice_clean = None
+                
             volume_slices.append({
                 "depth_m": self.depths[k],
                 "depth_index": k,
-                "values": slice_clean
+                "values": slice_clean,
+                "uncertainty": unc_slice_clean
             })
             
         return {

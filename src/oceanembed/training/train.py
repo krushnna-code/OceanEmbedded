@@ -15,7 +15,7 @@ from torch.utils.data import DataLoader, random_split
 from oceanembed.utils.seed import seed_everything
 from oceanembed.models.oceanembed import OceanEmbed3D
 from oceanembed.data.synthetic import SyntheticOceanDataset
-from oceanembed.training.losses import ReconstructionLoss
+from oceanembed.training.losses import PhysicsAwareReconstructionLoss
 from oceanembed.training.validate import evaluate
 from oceanembed.training.checkpoint import save_checkpoint
 
@@ -43,12 +43,11 @@ def train_oceanembed(
                 "embedding_dim": 128,
                 "target_h": 101,
                 "target_w": 241,
-                "use_transformer": True,
+                "use_thermodynamic_branch": True,
+                "use_dynamic_branch": True,
                 "use_convlstm": True,
                 "use_cross_attention": True,
-                "use_depth_embedding": True,
-                "transformer_heads": 8,
-                "transformer_layers": 2
+                "use_uncertainty_head": True
             },
             "training": {
                 "epochs": 5,
@@ -62,8 +61,10 @@ def train_oceanembed(
             "loss": {
                 "loss_type": "huber",
                 "huber_delta": 1.0,
-                "lambda_vertical": 0.01,
-                "lambda_spatial": 0.005
+                "lambda_surface": 0.05,
+                "lambda_vertical": 0.05,
+                "lambda_thermocline": 0.1,
+                "lambda_uncertainty": 0.1
             }
         }
         
@@ -78,12 +79,11 @@ def train_oceanembed(
         embedding_dim=m_cfg.get("embedding_dim", 128),
         target_h=m_cfg.get("target_h", 101),
         target_w=m_cfg.get("target_w", 241),
-        use_transformer=m_cfg.get("use_transformer", True),
+        use_thermodynamic_branch=m_cfg.get("use_thermodynamic_branch", True),
+        use_dynamic_branch=m_cfg.get("use_dynamic_branch", True),
         use_convlstm=m_cfg.get("use_convlstm", True),
         use_cross_attention=m_cfg.get("use_cross_attention", True),
-        use_depth_embedding=m_cfg.get("use_depth_embedding", True),
-        transformer_heads=m_cfg.get("transformer_heads", 8),
-        transformer_layers=m_cfg.get("transformer_layers", 2)
+        use_uncertainty_head=m_cfg.get("use_uncertainty_head", True)
     ).to(device)
     
     # 2. Dataset & Loaders
@@ -110,11 +110,13 @@ def train_oceanembed(
     
     # 3. Loss, Optimizer, Scheduler
     l_cfg = cfg.get("loss", {})
-    criterion = ReconstructionLoss(
+    criterion = PhysicsAwareReconstructionLoss(
         loss_type=l_cfg.get("loss_type", "huber"),
         huber_delta=l_cfg.get("huber_delta", 1.0),
-        lambda_vertical=l_cfg.get("lambda_vertical", 0.01),
-        lambda_spatial=l_cfg.get("lambda_spatial", 0.005)
+        lambda_surface=l_cfg.get("lambda_surface", 0.05),
+        lambda_vertical=l_cfg.get("lambda_vertical", 0.05),
+        lambda_thermocline=l_cfg.get("lambda_thermocline", 0.1),
+        lambda_uncertainty=l_cfg.get("lambda_uncertainty", 0.1)
     )
     
     optimizer = torch.optim.AdamW(
@@ -149,7 +151,16 @@ def train_oceanembed(
                 
             optimizer.zero_grad()
             out = model(surface, mask=mask)
-            loss, loss_dict = criterion(out.temperature, target, mask=mask)
+            surface_sst = surface[:, -1, 0] # channel 0 of latest timestep
+            
+            loss, loss_dict = criterion(
+                pred_mu=out.temperature,
+                target_y=target,
+                sigma=out.uncertainty,
+                log_var=out.log_var,
+                surface_sst=surface_sst,
+                mask=mask
+            )
             
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
@@ -158,7 +169,7 @@ def train_oceanembed(
             b_sz = surface.size(0)
             train_loss += loss.item() * b_sz
             train_samples += b_sz
-            
+
         scheduler.step()
         epoch_train_loss = train_loss / max(1, train_samples)
         

@@ -13,7 +13,8 @@ from backend.app.schemas.reconstruction import (
     VerticalProfileSchema,
     Volume3DSchema,
     EmbeddingSchema,
-    ConfigResponseSchema
+    ConfigResponseSchema,
+    MetricsResponseSchema
 )
 from oceanembed.services.reconstruction import ReconstructionService
 
@@ -160,9 +161,29 @@ def get_embedding(
         raise HTTPException(status_code=400, detail=str(e))
 
 
+@router.get("/api/metrics", response_model=MetricsResponseSchema)
+def get_validation_metrics():
+    """
+    Deferred Validation Metrics endpoint per Section 25/28.
+    Returns 'validation pending' placeholder until Layer 4 validation engine is integrated.
+    """
+    return MetricsResponseSchema(
+        status="validation pending",
+        message="Independent GLORYS12V1 and ARGO float validation is deferred to Phase 2 data harmonization.",
+        validation_phase="Layer 4 Validation Engine (Deferred)",
+        target_comparisons={
+            "GLORYS12V1": "Dense reanalysis target comparison (explicitly NOT ground truth) pending.",
+            "ARGO": "Independent in-situ float validation (strict train/val holdout) pending."
+        },
+        available_metrics=["RMSE", "MAE", "Mean Bias", "Pearson Correlation (r)", "R^2"],
+        note="Do not fabricate scientific metrics during model development phase."
+    )
+
+
 @router.post("/api/inference")
+@router.post("/predict")
 def run_development_inference(payload: Dict[str, Any] = Body(...)):
-    """Development endpoint to execute on-demand model inference."""
+    """Development endpoint to execute on-demand model inference (alias: /predict)."""
     svc = get_service()
     date = payload.get("date")
     depth = payload.get("depth", 0.0)
@@ -178,3 +199,4 @@ def run_development_inference(payload: Dict[str, Any] = Body(...)):
         "result": rec,
         "note": "Development inference executed via ReconstructionService."
     }
+

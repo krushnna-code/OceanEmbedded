@@ -10,6 +10,7 @@ interface OceanMap2DProps {
   selectedLon: number;
   onSelectPoint: (lat: number, lon: number) => void;
   loading: boolean;
+  showUncertainty?: boolean;
 }
 
 export const OceanMap2D: React.FC<OceanMap2DProps> = ({
@@ -18,9 +19,10 @@ export const OceanMap2D: React.FC<OceanMap2DProps> = ({
   selectedLon,
   onSelectPoint,
   loading,
+  showUncertainty = false,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [hoverInfo, setHoverInfo] = useState<{ lat: number; lon: number; val: number | null } | null>(null);
+  const [hoverInfo, setHoverInfo] = useState<{ lat: number; lon: number; val: number | null; unc: number | null } | null>(null);
 
   // Scientific thermal colormap (cividis/turbo approximation)
   const getColormapColor = (val: number, minVal: number, maxVal: number, isAnomaly: boolean): [number, number, number] => {
@@ -67,15 +69,27 @@ export const OceanMap2D: React.FC<OceanMap2DProps> = ({
     return [r, g, b];
   };
 
+  // Distinct, non-alarming uncertainty colormap (indigo -> purple -> magenta -> cyan)
+  const getUncertaintyColor = (val: number, minVal: number, maxVal: number): [number, number, number] => {
+    const range = Math.max(0.01, maxVal - minVal);
+    const t = Math.max(0, Math.min(1, (val - minVal) / range));
+    const r = Math.round(45 * (1 - t) + 216 * t);
+    const g = Math.round(30 * (1 - t) + 160 * t);
+    const b = Math.round(130 * (1 - t) + 254 * t);
+    return [r, g, b];
+  };
+
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas || !data || !data.values || data.values.length === 0) return;
+    if (!canvas || !data) return;
+    const gridSource = (showUncertainty && data.uncertainty) ? data.uncertainty : data.values;
+    if (!gridSource || gridSource.length === 0) return;
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const numRows = data.values.length; // 101 (latitudes 5N to 30N)
-    const numCols = data.values[0].length; // 241 (longitudes 45E to 105E)
+    const numRows = gridSource.length; // 101 (latitudes 5N to 30N)
+    const numCols = gridSource[0].length; // 241 (longitudes 45E to 105E)
 
     canvas.width = canvas.parentElement?.clientWidth || 800;
     canvas.height = 460;
@@ -86,8 +100,8 @@ export const OceanMap2D: React.FC<OceanMap2DProps> = ({
     const imgData = ctx.createImageData(width, height);
     const buf = imgData.data;
 
-    const minVal = data.stats.min;
-    const maxVal = data.stats.max;
+    const minVal = showUncertainty ? (data.uncertainty_stats?.min ?? 0.1) : data.stats.min;
+    const maxVal = showUncertainty ? (data.uncertainty_stats?.max ?? 0.8) : data.stats.max;
 
     for (let py = 0; py < height; py++) {
       // In cartesian coordinates, top of canvas is max_lat (30N), bottom is min_lat (5N)
@@ -98,7 +112,7 @@ export const OceanMap2D: React.FC<OceanMap2DProps> = ({
         const lonFraction = px / width;
         const colIdx = Math.floor(lonFraction * (numCols - 1));
 
-        const val = data.values[rowIdx]?.[colIdx];
+        const val = gridSource[rowIdx]?.[colIdx];
         const pixelIdx = (py * width + px) * 4;
 
         if (val === null || val === undefined) {
@@ -108,8 +122,10 @@ export const OceanMap2D: React.FC<OceanMap2DProps> = ({
           buf[pixelIdx + 2] = 59;
           buf[pixelIdx + 3] = 255;
         } else {
-          // Ocean cell with thermal colormap
-          const [r, g, b] = getColormapColor(val, minVal, maxVal, data.is_anomaly);
+          // Ocean cell
+          const [r, g, b] = showUncertainty
+            ? getUncertaintyColor(val, minVal, maxVal)
+            : getColormapColor(val, minVal, maxVal, data.is_anomaly);
           buf[pixelIdx] = r;
           buf[pixelIdx + 1] = g;
           buf[pixelIdx + 2] = b;
@@ -206,8 +222,9 @@ export const OceanMap2D: React.FC<OceanMap2DProps> = ({
     const rowIdx = Math.floor(latFraction * (data.values.length - 1));
     const colIdx = Math.floor(lonFraction * (data.values[0].length - 1));
     const val = data.values[rowIdx]?.[colIdx] ?? null;
+    const unc = data.uncertainty ? (data.uncertainty[rowIdx]?.[colIdx] ?? null) : null;
 
-    setHoverInfo({ lat, lon, val });
+    setHoverInfo({ lat, lon, val, unc });
   };
 
   return (
@@ -216,7 +233,7 @@ export const OceanMap2D: React.FC<OceanMap2DProps> = ({
         <div className="gov-card-title">
           <Compass size={16} color="#0284c7" />
           <span>
-            2D Ocean Horizontal Slice &mdash; Depth: {data?.actual_depth_m ?? 0}m
+            {showUncertainty ? '2D Ocean Uncertainty Field (σ)' : '2D Ocean Horizontal Slice'} &mdash; Depth: {data?.actual_depth_m ?? 0}m
           </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.75rem' }}>
@@ -259,6 +276,11 @@ export const OceanMap2D: React.FC<OceanMap2DProps> = ({
                 <strong>Temperature:</strong>{' '}
                 {hoverInfo.val !== null ? `${hoverInfo.val.toFixed(2)} °C` : 'Land'}
               </div>
+              {hoverInfo.unc !== null && (
+                <div style={{ color: '#c084fc' }}>
+                  <strong>Uncertainty &sigma;:</strong> &plusmn;{hoverInfo.unc.toFixed(2)} °C (Demo)
+                </div>
+              )}
             </div>
           )}
 
@@ -286,12 +308,12 @@ export const OceanMap2D: React.FC<OceanMap2DProps> = ({
           gap: '1rem',
           padding: '0 0.5rem'
         }}>
-          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#334155', minWidth: '95px' }}>
-            {data?.is_anomaly ? 'Anomaly (°C):' : 'Temperature (°C):'}
+          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#334155', minWidth: '105px' }}>
+            {showUncertainty ? 'Uncertainty σ (°C):' : data?.is_anomaly ? 'Anomaly (°C):' : 'Temperature (°C):'}
           </span>
 
           <span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#475569' }}>
-            {data?.stats.min ?? 0}°C
+            {showUncertainty ? `${data?.uncertainty_stats?.min ?? 0.1}°C` : `${data?.stats.min ?? 0}°C`}
           </span>
 
           <div style={{
@@ -299,13 +321,15 @@ export const OceanMap2D: React.FC<OceanMap2DProps> = ({
             height: '14px',
             borderRadius: '2px',
             border: '1px solid #cbd5e1',
-            background: data?.is_anomaly
+            background: showUncertainty
+              ? 'linear-gradient(to right, #2d1e82, #7c3aed, #c084fc, #38bdf8)'
+              : data?.is_anomaly
               ? 'linear-gradient(to right, #0055ff, #ffffff, #ff0000)'
               : 'linear-gradient(to right, #141e8c, #1e8cd2, #28c86e, #f0c828, #dc321e)'
           }} />
 
           <span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#475569' }}>
-            {data?.stats.max ?? 30}°C
+            {showUncertainty ? `${data?.uncertainty_stats?.max ?? 0.8}°C` : `${data?.stats.max ?? 30}°C`}
           </span>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginLeft: '1rem' }}>
@@ -317,3 +341,4 @@ export const OceanMap2D: React.FC<OceanMap2DProps> = ({
     </div>
   );
 };
+

@@ -25,20 +25,21 @@ export const ProfilePanel: React.FC<ProfilePanelProps> = ({
     );
   }
 
-  const { depths_m, temperature_profile, anomaly_profile, nearest_grid_point, is_ocean } = profile;
+  const { depths_m, temperature_profile, anomaly_profile, uncertainty, nearest_grid_point, is_ocean } = profile;
 
   // Filter valid numeric pairs for SVG rendering
-  const validPoints: { depth: number; temp: number; anom: number; idx: number }[] = [];
+  const validPoints: { depth: number; temp: number; anom: number; unc: number | null; idx: number }[] = [];
   depths_m.forEach((d, idx) => {
     const t = temperature_profile[idx];
     const a = anomaly_profile[idx];
+    const u = uncertainty ? uncertainty[idx] : null;
     if (t !== null && !isNaN(t)) {
-      validPoints.push({ depth: d, temp: t, anom: a ?? 0, idx });
+      validPoints.push({ depth: d, temp: t, anom: a ?? 0, unc: u, idx });
     }
   });
 
-  const minTemp = validPoints.length > 0 ? Math.min(...validPoints.map((p) => p.temp)) - 1 : 0;
-  const maxTemp = validPoints.length > 0 ? Math.max(...validPoints.map((p) => p.temp)) + 1 : 32;
+  const minTemp = validPoints.length > 0 ? Math.min(...validPoints.map((p) => p.temp - (p.unc ?? 0))) - 1 : 0;
+  const maxTemp = validPoints.length > 0 ? Math.max(...validPoints.map((p) => p.temp + (p.unc ?? 0))) + 1 : 32;
   const tempRange = Math.max(1, maxTemp - minTemp);
 
   const svgWidth = 320;
@@ -47,9 +48,8 @@ export const ProfilePanel: React.FC<ProfilePanelProps> = ({
   const plotW = svgWidth - padding.left - padding.right;
   const plotH = svgHeight - padding.top - padding.bottom;
 
-  // Depth scaling: use log1p or power scale for ocean readability so upper 200m is well-resolved
+  // Depth scaling: square root scaling stretches upper 0-200m while accommodating 1000m
   const scaleDepth = (d: number): number => {
-    // Square root scaling stretches upper 0-200m while accommodating 1000m
     const maxSqrt = Math.sqrt(1000);
     const frac = Math.sqrt(d) / maxSqrt;
     return padding.top + frac * plotH;
@@ -66,12 +66,27 @@ export const ProfilePanel: React.FC<ProfilePanelProps> = ({
     return i === 0 ? `M ${x} ${y}` : `${acc} L ${x} ${y}`;
   }, '');
 
+  // Build uncertainty band polygon (upper bounds going down, lower bounds coming back up)
+  const hasUncertainty = validPoints.some((p) => p.unc !== null && p.unc !== undefined);
+  let uncertaintyBandD = '';
+  if (hasUncertainty) {
+    const upperCoords = validPoints.map((pt) => {
+      const u = pt.unc ?? 0.3;
+      return `${scaleTemp(pt.temp + u)},${scaleDepth(pt.depth)}`;
+    });
+    const lowerCoords = [...validPoints].reverse().map((pt) => {
+      const u = pt.unc ?? 0.3;
+      return `${scaleTemp(pt.temp - u)},${scaleDepth(pt.depth)}`;
+    });
+    uncertaintyBandD = [...upperCoords, ...lowerCoords].join(' ');
+  }
+
   return (
     <div className="gov-card">
       <div className="gov-card-header">
         <div className="gov-card-title">
           <Activity size={16} color="#0284c7" />
-          <span>Subsurface Vertical Profile</span>
+          <span>Subsurface Vertical Profile (with Uncertainty &sigma;)</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.75rem', color: '#334155' }}>
           <MapPin size={13} color="#0284c7" />
@@ -90,8 +105,15 @@ export const ProfilePanel: React.FC<ProfilePanelProps> = ({
         <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap' }}>
           {/* SVG Depth vs Temperature Curve */}
           <div style={{ flex: '1 1 300px', background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '3px', padding: '0.5rem' }}>
-            <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#1e3a5f', marginBottom: '0.4rem', textAlign: 'center' }}>
-              Temperature (°C) vs Depth (0–1000m)
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+              <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#1e3a5f' }}>
+                Temperature (&mu; &plusmn; &sigma;) vs Depth
+              </span>
+              {hasUncertainty && (
+                <span style={{ fontSize: '0.65rem', fontWeight: 600, color: '#9333ea', background: '#f3e8ff', padding: '0.1rem 0.4rem', borderRadius: '2px' }}>
+                  &plusmn;&sigma; Band (Demo)
+                </span>
+              )}
             </div>
 
             <svg width="100%" height="340" viewBox={`0 0 ${svgWidth} ${svgHeight}`} style={{ overflow: 'visible' }}>
@@ -112,7 +134,7 @@ export const ProfilePanel: React.FC<ProfilePanelProps> = ({
                 textAnchor="end"
                 fontStyle="italic"
               >
-                Thermocline Layer
+                Thermocline (50-200m)
               </text>
 
               {/* Grid lines - Depth (horizontal) */}
@@ -142,6 +164,17 @@ export const ProfilePanel: React.FC<ProfilePanelProps> = ({
                 );
               })}
 
+              {/* Uncertainty Band Shading (μ ± σ) */}
+              {hasUncertainty && uncertaintyBandD && (
+                <polygon
+                  points={uncertaintyBandD}
+                  fill="rgba(147, 51, 234, 0.18)"
+                  stroke="rgba(147, 51, 234, 0.45)"
+                  strokeWidth="1"
+                  strokeDasharray="2,2"
+                />
+              )}
+
               {/* Selected Depth Indicator Line */}
               <line
                 x1={padding.left}
@@ -152,7 +185,7 @@ export const ProfilePanel: React.FC<ProfilePanelProps> = ({
                 strokeWidth="2"
               />
 
-              {/* Temperature Profile Curve */}
+              {/* Temperature Profile Curve (μ) */}
               {pathD && <path d={pathD} fill="none" stroke="#0284c7" strokeWidth="2.5" strokeLinecap="round" />}
 
               {/* Depth Point Markers */}
@@ -188,7 +221,8 @@ export const ProfilePanel: React.FC<ProfilePanelProps> = ({
               <thead>
                 <tr style={{ background: '#f8fafc', borderBottom: '1px solid #cbd5e1', color: '#334155' }}>
                   <th style={{ padding: '0.35rem 0.5rem' }}>Depth</th>
-                  <th style={{ padding: '0.35rem 0.5rem' }}>Temp (°C)</th>
+                  <th style={{ padding: '0.35rem 0.5rem' }}>Temp &mu;</th>
+                  <th style={{ padding: '0.35rem 0.5rem' }}>Unc &sigma;</th>
                   <th style={{ padding: '0.35rem 0.5rem' }}>Anomaly</th>
                 </tr>
               </thead>
@@ -196,6 +230,7 @@ export const ProfilePanel: React.FC<ProfilePanelProps> = ({
                 {depths_m.map((d, idx) => {
                   const t = temperature_profile[idx];
                   const a = anomaly_profile[idx];
+                  const u = uncertainty ? uncertainty[idx] : null;
                   const isSelected = d === selectedDepth;
                   return (
                     <tr
@@ -214,6 +249,9 @@ export const ProfilePanel: React.FC<ProfilePanelProps> = ({
                       <td style={{ padding: '0.32rem 0.5rem', color: '#0f172a' }}>
                         {t !== null ? `${t.toFixed(2)} °C` : '&mdash;'}
                       </td>
+                      <td style={{ padding: '0.32rem 0.5rem', color: '#9333ea', fontSize: '0.72rem' }}>
+                        {u !== null ? `&plusmn;${u.toFixed(2)}` : '&plusmn;0.25'}
+                      </td>
                       <td style={{ padding: '0.32rem 0.5rem', color: a && a > 0 ? '#dc2626' : '#2563eb' }}>
                         {a !== null ? `${a > 0 ? '+' : ''}${a.toFixed(2)}` : '&mdash;'}
                       </td>
@@ -223,7 +261,7 @@ export const ProfilePanel: React.FC<ProfilePanelProps> = ({
               </tbody>
             </table>
 
-            {/* Validation Notice per Section 45 & 55 */}
+            {/* Uncertainty & Validation Notice per Section 17, 38 & 48 */}
             <div style={{
               marginTop: '0.75rem',
               padding: '0.5rem',
@@ -235,10 +273,9 @@ export const ProfilePanel: React.FC<ProfilePanelProps> = ({
               display: 'flex',
               gap: '0.35rem'
             }}>
-              <AlertCircle size={14} color="#f59e0b" style={{ flexShrink: 0, marginTop: '2px' }} />
+              <AlertCircle size={14} color="#9333ea" style={{ flexShrink: 0, marginTop: '2px' }} />
               <div>
-                <strong>Independent Validation Notice:</strong> In-situ ARGO float comparison is currently{' '}
-                <em>&ldquo;Validation pending&rdquo;</em> for the subsequent operational phase.
+                <strong>Model Development &sigma; Notice:</strong> Predicted spread &sigma;(x,y,z) is an internal training signal from the heteroscedastic uncertainty head (DEMO / MODEL DEVELOPMENT DATA, not validated confidence).
               </div>
             </div>
           </div>

@@ -60,3 +60,15 @@ class PreprocessingService:
         NOT IMPLEMENTED YET.
         """
         raise NotImplementedError("Production masking is deferred to the full pipeline phase.")
+
+    def interpolate_glorys_depths(
+        self,
+        glorys_50_level_field: np.ndarray,
+        target_depths: Optional[list] = None
+    ) -> np.ndarray:
+        """
+        GLORYS 50 vertical levels -> 15 standard target depths (0 - 1000m).
+        NOT IMPLEMENTED YET.
+        """
+        raise NotImplementedError("GLORYS depth vertical interpolation is deferred to the full pipeline phase.")
+

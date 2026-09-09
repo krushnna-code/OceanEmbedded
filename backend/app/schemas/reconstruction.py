@@ -27,6 +27,7 @@ class ModelMetadataSchema(BaseModel):
     surface_variables: List[str]
     architecture: Dict[str, Any]
     status: str
+    validation_status: Optional[str] = None
     checkpoint_loaded: bool
 
 
@@ -48,8 +49,12 @@ class ReconstructionMapSchema(BaseModel):
     latitude: List[float]
     longitude: List[float]
     values: List[List[Optional[float]]]
+    uncertainty: Optional[List[List[Optional[float]]]] = None
+    uncertainty_units: Optional[str] = None
     stats: StatsSchema
+    uncertainty_stats: Optional[StatsSchema] = None
     status: str
+    uncertainty_note: Optional[str] = None
 
 
 class LocationSchema(BaseModel):
@@ -74,14 +79,17 @@ class VerticalProfileSchema(BaseModel):
     temperature_profile: List[Optional[float]]
     anomaly_profile: List[Optional[float]]
     uncertainty: Optional[List[Optional[float]]] = None
+    uncertainty_band: Optional[Dict[str, Any]] = None
     units: str
     status: str
+    uncertainty_note: Optional[str] = None
 
 
 class VolumeSliceSchema(BaseModel):
     depth_m: float
     depth_index: int
     values: List[List[Optional[float]]]
+    uncertainty: Optional[List[List[Optional[float]]]] = None
 
 
 class Volume3DSchema(BaseModel):
@@ -115,3 +123,13 @@ class ConfigResponseSchema(BaseModel):
     model_id: str
     version: str
     status: str
+
+
+class MetricsResponseSchema(BaseModel):
+    status: str
+    message: str
+    validation_phase: str
+    target_comparisons: Dict[str, str]
+    available_metrics: List[str]
+    note: str
+

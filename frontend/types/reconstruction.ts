@@ -18,6 +18,7 @@ export interface ModelMetadata {
   surface_variables: string[];
   architecture: Record<string, string | number>;
   status: string;
+  validation_status?: string;
   checkpoint_loaded: boolean;
 }
 
@@ -33,12 +34,20 @@ export interface ReconstructionMapData {
   latitude: number[];
   longitude: number[];
   values: (number | null)[][];
+  uncertainty?: (number | null)[][] | null;
+  uncertainty_units?: string;
   stats: {
     min: number;
     max: number;
     mean: number;
   };
+  uncertainty_stats?: {
+    min: number;
+    max: number;
+    mean: number;
+  };
   status: string;
+  uncertainty_note?: string;
 }
 
 export interface VerticalProfileData {
@@ -58,15 +67,22 @@ export interface VerticalProfileData {
   depths_m: number[];
   temperature_profile: (number | null)[];
   anomaly_profile: (number | null)[];
-  uncertainty: null;
+  uncertainty?: (number | null)[] | null;
+  uncertainty_band?: {
+    sigma: (number | null)[];
+    upper_bound: (number | null)[];
+    lower_bound: (number | null)[];
+  };
   units: string;
   status: string;
+  uncertainty_note?: string;
 }
 
 export interface VolumeSlice {
   depth_m: number;
   depth_index: number;
   values: (number | null)[][];
+  uncertainty?: (number | null)[][] | null;
 }
 
 export interface Volume3DData {
@@ -113,3 +129,13 @@ export interface EmbeddingData {
   values: number[][];
   status: string;
 }
+
+export interface MetricsData {
+  status: string;
+  message: string;
+  validation_phase: string;
+  target_comparisons: Record<string, string>;
+  available_metrics: string[];
+  note: string;
+}
+

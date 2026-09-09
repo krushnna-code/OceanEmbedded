@@ -29,12 +29,12 @@ export const ModelInfoPanel: React.FC<ModelInfoProps> = ({ metadata }) => {
             <table style={{ width: '100%', fontSize: '0.78rem', borderCollapse: 'collapse' }}>
               <tbody>
                 <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                  <td style={{ padding: '0.4rem 0', color: '#64748b' }}>Model Identifier</td>
-                  <td style={{ padding: '0.4rem 0', fontWeight: 600, color: '#0f172a' }}>OceanEmbed3D</td>
+                  <td style={{ padding: '0.4rem 0', color: '#64748b' }}>Model Architecture</td>
+                  <td style={{ padding: '0.4rem 0', fontWeight: 600, color: '#0f172a' }}>OceanEmbed (GNN-ConvLSTM-Transformer Hybrid)</td>
                 </tr>
                 <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
                   <td style={{ padding: '0.4rem 0', color: '#64748b' }}>Version</td>
-                  <td style={{ padding: '0.4rem 0', fontWeight: 600, color: '#0284c7' }}>v0.1.0-dev</td>
+                  <td style={{ padding: '0.4rem 0', fontWeight: 600, color: '#0284c7' }}>v0.3.0-dev</td>
                 </tr>
                 <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
                   <td style={{ padding: '0.4rem 0', color: '#64748b' }}>Domain</td>
@@ -42,11 +42,19 @@ export const ModelInfoPanel: React.FC<ModelInfoProps> = ({ metadata }) => {
                 </tr>
                 <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
                   <td style={{ padding: '0.4rem 0', color: '#64748b' }}>Target Grid Resolution</td>
-                  <td style={{ padding: '0.4rem 0', fontWeight: 600, color: '#0f172a' }}>0.25° × 0.25° (101 × 241 nodes)</td>
+                  <td style={{ padding: '0.4rem 0', fontWeight: 600, color: '#0f172a' }}>0.25° × 0.25° (101 × 241 = 24,341 graph nodes)</td>
                 </tr>
                 <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                  <td style={{ padding: '0.4rem 0', color: '#64748b' }}>Temporal Input Window</td>
-                  <td style={{ padding: '0.4rem 0', fontWeight: 600, color: '#0f172a' }}>7-Day Sequential Window (T=7)</td>
+                  <td style={{ padding: '0.4rem 0', color: '#64748b' }}>Graph Connectivity</td>
+                  <td style={{ padding: '0.4rem 0', fontWeight: 600, color: '#0f172a' }}>8-Neighbour Spatial Graph (192,680 edges)</td>
+                </tr>
+                <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                  <td style={{ padding: '0.4rem 0', color: '#64748b' }}>Temporal Window</td>
+                  <td style={{ padding: '0.4rem 0', fontWeight: 600, color: '#0f172a' }}>7-Day Rolling Sequence (T-6 … T)</td>
+                </tr>
+                <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                  <td style={{ padding: '0.4rem 0', color: '#64748b' }}>Output Fields</td>
+                  <td style={{ padding: '0.4rem 0', fontWeight: 600, color: '#0f172a' }}>Temperature &mu;(x,y,z) + Uncertainty &sigma;(x,y,z)</td>
                 </tr>
                 <tr>
                   <td style={{ padding: '0.4rem 0', color: '#64748b' }}>Reconstructed Depths</td>
@@ -58,51 +66,54 @@ export const ModelInfoPanel: React.FC<ModelInfoProps> = ({ metadata }) => {
 
           <div>
             <h3 style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f2744', marginBottom: '0.5rem' }}>
-              7 Multimodal Surface Satellite Inputs
+              Dual-Branch Multimodal Inputs (7 Channels)
             </h3>
             <table style={{ width: '100%', fontSize: '0.78rem', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid #cbd5e1', color: '#475569', textAlign: 'left' }}>
+                  <th style={{ padding: '0.3rem 0' }}>Branch</th>
                   <th style={{ padding: '0.3rem 0' }}>Channel</th>
                   <th style={{ padding: '0.3rem 0' }}>Variable</th>
-                  <th style={{ padding: '0.3rem 0' }}>Source Sensor/Product</th>
+                  <th style={{ padding: '0.3rem 0' }}>Source Product</th>
                 </tr>
               </thead>
               <tbody>
                 <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                  <td rowSpan={2} style={{ padding: '0.35rem 0', fontWeight: 700, color: '#0369a1', verticalAlign: 'top' }}>Thermodynamic GNN</td>
                   <td style={{ padding: '0.35rem 0', fontWeight: 600 }}>C0</td>
                   <td>analysed_sst (°C)</td>
-                  <td style={{ color: '#64748b' }}>OSTIA / MetOffice Global SST</td>
+                  <td style={{ color: '#64748b' }}>OSTIA SST (0.05°)</td>
                 </tr>
-                <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
                   <td style={{ padding: '0.35rem 0', fontWeight: 600 }}>C1</td>
                   <td>sos (PSU)</td>
-                  <td style={{ color: '#64748b' }}>CMEMS Multi-Observation SSS</td>
+                  <td style={{ color: '#64748b' }}>CMEMS SSS (0.125°)</td>
                 </tr>
                 <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                  <td rowSpan={5} style={{ padding: '0.35rem 0', fontWeight: 700, color: '#0f766e', verticalAlign: 'top' }}>Dynamic GNN</td>
                   <td style={{ padding: '0.35rem 0', fontWeight: 600 }}>C2</td>
                   <td>sla / adt (m)</td>
-                  <td style={{ color: '#64748b' }}>C3S / DUACS Two-Satellite Altimetry</td>
+                  <td style={{ color: '#64748b' }}>DUACS SLA (0.25°)</td>
                 </tr>
                 <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
                   <td style={{ padding: '0.35rem 0', fontWeight: 600 }}>C3</td>
                   <td>uo (m/s)</td>
-                  <td style={{ color: '#64748b' }}>CMEMS Zonal Geostrophic+Ekman Current</td>
+                  <td style={{ color: '#64748b' }}>OSCAR / CMEMS Current U</td>
                 </tr>
                 <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
                   <td style={{ padding: '0.35rem 0', fontWeight: 600 }}>C4</td>
                   <td>vo (m/s)</td>
-                  <td style={{ color: '#64748b' }}>CMEMS Meridional Current</td>
+                  <td style={{ color: '#64748b' }}>OSCAR / CMEMS Current V</td>
                 </tr>
                 <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
                   <td style={{ padding: '0.35rem 0', fontWeight: 600 }}>C5</td>
                   <td>uwnd (m/s)</td>
-                  <td style={{ color: '#64748b' }}>CCMP Zonal Wind Vector (10m)</td>
+                  <td style={{ color: '#64748b' }}>CCMP Wind U (10m)</td>
                 </tr>
                 <tr>
                   <td style={{ padding: '0.35rem 0', fontWeight: 600 }}>C6</td>
                   <td>vwnd (m/s)</td>
-                  <td style={{ color: '#64748b' }}>CCMP Meridional Wind Vector (10m)</td>
+                  <td style={{ color: '#64748b' }}>CCMP Wind V (10m)</td>
                 </tr>
               </tbody>
             </table>
@@ -115,7 +126,7 @@ export const ModelInfoPanel: React.FC<ModelInfoProps> = ({ metadata }) => {
         <div className="gov-card-header">
           <div className="gov-card-title">
             <Info size={16} color="#0284c7" />
-            <span>Subsurface Neural Tensor Flow</span>
+            <span>Dual-Branch GNN-Hybrid Tensor Flow</span>
           </div>
         </div>
         <div className="gov-card-body" style={{ fontSize: '0.8rem', color: '#334155' }}>
@@ -133,23 +144,23 @@ export const ModelInfoPanel: React.FC<ModelInfoProps> = ({ metadata }) => {
             fontSize: '0.78rem'
           }}>
             <div style={{ background: '#e0f2fe', padding: '0.5rem 0.8rem', borderRadius: '3px', border: '1px solid #38bdf8' }}>
-              <strong>Surface Tensor</strong><br />[B, 7, 7, 101, 241]
+              <strong>Surface Input</strong><br />[B, 7, 7, 101, 241]
             </div>
             <span>&rarr;</span>
             <div style={{ background: '#f0fdf4', padding: '0.5rem 0.8rem', borderRadius: '3px', border: '1px solid #4ade80' }}>
-              <strong>CNN Stem + ResBlocks</strong><br />[B*T, 128, 26, 61]
+              <strong>Thermo GNN (SST+SSS) &amp; Dynamic GNN</strong><br />8-Neighbour Graph Convolutions
             </div>
             <span>&rarr;</span>
             <div style={{ background: '#fef3c7', padding: '0.5rem 0.8rem', borderRadius: '3px', border: '1px solid #fcd34d' }}>
-              <strong>Spatial Transformer &amp; ConvLSTM</strong><br />Spatial Q &times; Temporal KV
+              <strong>Gated Fusion &amp; ConvLSTM</strong><br />7-Day Spatiotemporal Memory
             </div>
             <span>&rarr;</span>
             <div style={{ background: '#f3e8ff', padding: '0.5rem 0.8rem', borderRadius: '3px', border: '1px solid #c084fc' }}>
-              <strong>Latent Embedding z</strong><br />[B, 128, 26, 61]
+              <strong>Cross-Variable Attention</strong><br />Latent Embedding z [B, 128, 26, 61]
             </div>
             <span>&rarr;</span>
             <div style={{ background: '#fee2e2', padding: '0.5rem 0.8rem', borderRadius: '3px', border: '1px solid #f87171' }}>
-              <strong>Depth Decoder</strong><br />[B, 15, 101, 241]
+              <strong>Depth Decoder + Uncertainty Head</strong><br />&mu; [B,15,H,W] &amp; &sigma; [B,15,H,W]
             </div>
           </div>
         </div>

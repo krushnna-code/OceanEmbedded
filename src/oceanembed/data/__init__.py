@@ -19,6 +19,10 @@ from oceanembed.data.dev_fixture_inspector import (
     inspect_dev_fixture,
     EXPECTED_FIXTURE_SCHEMAS
 )
+from oceanembed.data.graph_builder import (
+    build_grid_graph,
+    compute_expected_edge_count
+)
 from oceanembed.data.regrid import PreprocessingService
 
 __all__ = [
@@ -37,5 +41,7 @@ __all__ = [
     "generate_synthetic_profile",
     "inspect_dev_fixture",
     "EXPECTED_FIXTURE_SCHEMAS",
+    "build_grid_graph",
+    "compute_expected_edge_count",
     "PreprocessingService"
 ]

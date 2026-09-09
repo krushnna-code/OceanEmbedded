@@ -40,7 +40,8 @@ def test_model_by_id():
     response = client.get("/api/model/oceanembed-3d-v1")
     assert response.status_code == 200
     data = response.json()
-    assert data["name"] == "OceanEmbed3D"
+    assert "OceanEmbed" in data["name"]
+    assert "thermodynamic_branch" in data["architecture"]
 
 
 def test_reconstruction_endpoint():
@@ -51,6 +52,7 @@ def test_reconstruction_endpoint():
     assert len(data["values"]) == 101
     assert len(data["values"][0]) == 241
     assert "stats" in data
+    assert "uncertainty" in data
     assert data["units"] == "°C"
 
 
@@ -60,7 +62,9 @@ def test_profile_endpoint():
     data = response.json()
     assert "temperature_profile" in data
     assert len(data["temperature_profile"]) == 15
-    assert data["uncertainty"] is None  # Never fabricated
+    assert "uncertainty" in data
+    assert "uncertainty_band" in data
+    assert len(data["uncertainty"]) == 15
 
 
 def test_volume_endpoint():
@@ -70,6 +74,7 @@ def test_volume_endpoint():
     assert len(data["slices"]) == 15
     assert "dimensions" in data
     assert data["downsample_factor"] == 4
+    assert "uncertainty" in data["slices"][0]
 
 
 def test_embedding_endpoint():
@@ -78,3 +83,25 @@ def test_embedding_endpoint():
     data = response.json()
     assert "values" in data
     assert data["embedding_dimension"] == 128
+
+
+def test_metrics_endpoint():
+    response = client.get("/api/metrics")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "validation pending"
+    assert "target_comparisons" in data
+    assert "GLORYS12V1" in data["target_comparisons"]
+    assert "ARGO" in data["target_comparisons"]
+
+
+def test_inference_endpoints():
+    payload = {"date": "2026-03-10", "depth": 50.0, "is_anomaly": False}
+    # Test /api/inference
+    r1 = client.post("/api/inference", json=payload)
+    assert r1.status_code == 200
+    # Test /predict alias
+    r2 = client.post("/predict", json=payload)
+    assert r2.status_code == 200
+    assert r2.json()["status"] == "success"
+

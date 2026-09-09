@@ -4,7 +4,7 @@ Combines the 2D Latent Ocean Embedding with depth embeddings to reconstruct
 high-resolution subsurface temperature fields across the 15 standard ocean depths.
 """
 
-from typing import Optional, List, Tuple
+from typing import Optional, List, Tuple, Any, Union
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -114,14 +114,17 @@ class DepthAwareDecoder(nn.Module):
     def forward(
         self,
         embedding: torch.Tensor,
-        depth_embeddings: torch.Tensor
-    ) -> torch.Tensor:
+        depth_embeddings: torch.Tensor,
+        return_features: bool = False
+    ) -> Any:
         """
         Args:
             embedding: Latent Ocean Embedding [B, D, H', W']
             depth_embeddings: Depth tokens [num_depths, depth_dim]
+            return_features: If True, returns tuple (reconstructed_maps, decoded_feat)
         Returns:
             reconstructed_maps: [B, num_depths, target_h, target_w]
+            or (reconstructed_maps, feat) if return_features=True
         """
         B, D, H_prime, W_prime = embedding.shape
         
@@ -144,6 +147,8 @@ class DepthAwareDecoder(nn.Module):
         if K == self.num_depths and depth_embeddings.ndim == 2:
             # Vectorized multi-depth output combined with depth-conditioned residual
             base_maps = self.direct_15_head(feat)  # [B, 15, H, W]
+            if return_features:
+                return base_maps, feat
             return base_maps
         else:
             # Per-depth FiLM modulated decoding
@@ -153,4 +158,7 @@ class DepthAwareDecoder(nn.Module):
                 cond_feat = self.depth_cond(feat, d_vec)
                 temp_k = self.to_temp(cond_feat)  # [B, 1, H, W]
                 outputs.append(temp_k)
-            return torch.cat(outputs, dim=1)  # [B, K, H, W]
+            maps = torch.cat(outputs, dim=1)  # [B, K, H, W]
+            if return_features:
+                return maps, feat
+            return maps

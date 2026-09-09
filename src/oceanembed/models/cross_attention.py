@@ -1,22 +1,24 @@
 """
-Spatial-Temporal Cross-Attention Fusion for OceanEmbed.
-Queries spatial state features against key/value temporal evolution features
-to produce the fused Latent Ocean Embedding.
+Cross-Variable & Spatiotemporal Attention Fusion for OceanEmbed.
+Allows thermodynamic, dynamic, and temporal ConvLSTM feature streams
+to attend across variables and temporal horizons to construct the Latent Ocean Embedding.
 """
 
+from typing import Optional, Tuple
 import torch
 import torch.nn as nn
 
 
 class CrossAttentionFusion(nn.Module):
     """
-    Cross-Attention Fusion Layer.
-    Query: Spatial representation (current high-resolution spatial structures, fronts, SST gradients)
-    Key/Value: Temporal representation (memory of heat storage, wind forcing, advective history)
+    Cross-Variable & Spatiotemporal Attention Fusion Layer.
+    Can fuse:
+      1. Spatial features (Query) vs Temporal features (Key/Value)
+      2. Cross-variable thermodynamic vs dynamic representations
     """
     def __init__(
         self,
-        embed_dim: int = 256,
+        embed_dim: int = 128,
         num_heads: int = 8,
         dropout: float = 0.0,
         mlp_ratio: float = 4.0
@@ -25,8 +27,8 @@ class CrossAttentionFusion(nn.Module):
         self.embed_dim = embed_dim
         self.num_heads = num_heads
         
-        self.norm_spatial = nn.LayerNorm(embed_dim)
-        self.norm_temporal = nn.LayerNorm(embed_dim)
+        self.norm_query = nn.LayerNorm(embed_dim)
+        self.norm_kv = nn.LayerNorm(embed_dim)
         
         self.cross_attn = nn.MultiheadAttention(
             embed_dim=embed_dim,
@@ -51,24 +53,32 @@ class CrossAttentionFusion(nn.Module):
     def forward(
         self,
         spatial_feat: torch.Tensor,
-        temporal_feat: torch.Tensor
+        temporal_feat: torch.Tensor,
+        aux_feat: Optional[torch.Tensor] = None
     ) -> torch.Tensor:
         """
         Args:
-            spatial_feat: [B, D, H, W]
-            temporal_feat: [B, D, H, W]
+            spatial_feat: Spatial or fused graph representation [B, D, H, W]
+            temporal_feat: Temporal ConvLSTM representation [B, D, H, W]
+            aux_feat: Optional auxiliary dynamic/thermo feature map [B, D, H, W]
         Returns:
-            fused_feat: [B, D, H, W]
+            fused_feat: Latent representation [B, D, H, W]
         """
         B, D, H, W = spatial_feat.shape
         N = H * W
         
-        # Flatten to sequences [B, N, D]
-        q = spatial_feat.flatten(2).transpose(1, 2)
-        kv = temporal_feat.flatten(2).transpose(1, 2)
+        # Query from spatial state
+        q = spatial_feat.flatten(2).transpose(1, 2) # [B, N, D]
         
-        norm_q = self.norm_spatial(q)
-        norm_kv = self.norm_temporal(kv)
+        # Key/Value from temporal state (and optional aux variable features)
+        if aux_feat is not None:
+            combined_kv = 0.5 * (temporal_feat + aux_feat)
+        else:
+            combined_kv = temporal_feat
+        kv = combined_kv.flatten(2).transpose(1, 2) # [B, N, D]
+        
+        norm_q = self.norm_query(q)
+        norm_kv = self.norm_kv(kv)
         
         attn_out, _ = self.cross_attn(
             query=norm_q,
@@ -83,3 +93,7 @@ class CrossAttentionFusion(nn.Module):
         fused_2d = fused.transpose(1, 2).view(B, D, H, W)
         out = self.out_conv(fused_2d) + spatial_feat
         return out
+
+
+# Alias for explicit specification naming
+CrossVariableAttentionFusion = CrossAttentionFusion
