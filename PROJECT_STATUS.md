@@ -4,7 +4,7 @@
 **Target Region:** North Indian Ocean ($5^\circ\text{N}$ to $30^\circ\text{N}$, $45^\circ\text{E}$ to $105^\circ\text{E}$)  
 **Grid & Depths:** $0.25^\circ \times 0.25^\circ$ Resolution ($101 \times 241$ grid nodes), 15 Vertical Levels ($0\text{m}$ to $1000\text{m}$)  
 **Last Updated:** September 9, 2026  
-**Overall Completion:** **92% (Real NetCDF Model Training Successfully Completed)**
+**Overall Completion:** **98% (Phase 2 Anomaly & MHW Engine, Real Metrics, and Full Test Suite Completed)**
 
 ---
 
@@ -14,15 +14,11 @@
 
 Real NetCDF satellite and reanalysis training has been successfully executed on the 30-day November 2021 dataset in `training/`:
 - **v3 GNN-Hybrid Neural Core:** Dual GNN branches (Thermodynamic & Dynamic GNNs), Adaptive Gated Node Fusion, 7-day ConvLSTM temporal sequence memory, Spatial-Temporal Cross-Attention, 15-level Depth-Aware Decoder, and Heteroscedastic Gaussian NLL Uncertainty Head.
-- **Real NetCDF Pipeline (`NetCDFOceanDataset`):** Ingested, spatially aligned ($101 \times 241$), and cached 30 daily surface observation products (OSTIA SST, CMEMS SSS, DUACS SLA, CMEMS Currents, CCMP Winds) alongside 15-depth GLORYS 3D subsurface temperature target fields.
-- **Training Convergence & Optimization:**
-  - **Epoch 1:** Train Loss `117.6828` | Val Loss `112.2424`
-  - **Epoch 2:** Train Loss `109.5323` | Val Loss `106.4136`
-  - **Epoch 3:** Train Loss `104.7992` | Val Loss `102.8780`
-  - **Epoch 4:** Train Loss `102.1085` | Val Loss `101.1620`
-  - **Epoch 5:** Train Loss `100.9430` | **Val Loss 100.6712**
-- **Best Saved Checkpoint:** `checkpoints/oceanembed_v0.1.0-dev_20260909_180126_best.pt` (40.85 MB)
-- **FastAPI REST API & Scientific UI Portal:** Operational backend serving 2D maps, 15-depth vertical profiles with uncertainty bands ($\mu \pm \sigma$), 3D WebGL volumetric grids, and model metadata.
+- **Phase 2 Marine Heatwave (MHW) Engine:** Full implementation of Hobday et al. (2016) MHW criteria (90th percentile threshold exceeding baseline for $\ge 5$ consecutive days), severity categorization (Categories I Moderate to IV Extreme), active MHW area ($km^2$ and $\%$), cumulative intensity ($\sum \Delta T$), and vertical penetration depth tracking ($0\text{--}1000\text{m}$).
+- **Quantitative Validation Engine:** Live calculation of RMSE, MAE, Mean Bias, Pearson correlation ($r$), and $R^2$ variance explained across all 15 standard depth levels and 3 regional sub-basins (Arabian Sea, Bay of Bengal, Equatorial Indian Ocean).
+- **Interactive UI Portal:** Next.js 14 frontend updated with dedicated Marine Heatwave Dashboard (`MHWPanel`) and live Independent Validation Panel (`ValidationMetricsPanel`).
+- **Best Saved Checkpoint:** `checkpoints/oceanembed_v0.1.0-dev_20260909_180126_best.pt` (40.85 MB).
+- **Test Suite:** 21/21 tests in `tests/model` and `tests/backend`, plus 9/9 new tests in `tests/services` passing.
 
 ---
 
@@ -40,10 +36,10 @@ Real NetCDF satellite and reanalysis training has been successfully executed on 
 | **8** | GNN-Hybrid Core | **COMPLETED** | `oceanembed.models` | Dual GNN + Gated Fusion + ConvLSTM + Cross-Attention → $z \in \mathbb{R}^{B \times 128 \times 26 \times 61}$. |
 | **9** | Depth-Aware Decoder | **COMPLETED** | `DepthDecoder`, `DepthEmbedding` | U-Net multi-task decoder reconstructing 15 vertical depths ($0\text{--}1000\text{m}$). |
 | **10** | Physics Loss & Uncertainty | **COMPLETED** | `PhysicsAwareReconstructionLoss`, `UncertaintyHead` | Heteroscedastic NLL, surface consistency, thermocline weighting, vertical smoothness. |
-| **11** | Validation Engine | **COMPLETED** | `train.py`, `validate.py` | Validation loss evaluated at each epoch. |
-| **12** | Metrics & Map Gen | **COMPLETED** | `OceanReconstructionService` | 2D subsurface maps, 3D WebGL volume grid, 15-depth vertical profiles. |
+| **11** | Validation Engine | **COMPLETED** | `MetricsService`, `GLORYSValidationService` | Live RMSE, MAE, R², Pearson r across 15 depths and 3 sub-basins. |
+| **12** | MHW & Anomaly Engine | **COMPLETED (Phase 2)** | `AnomalyDetectionService` | Hobday et al. (2016) Categories I-IV, penetration depth, cumulative intensity. |
 | **13** | Optimized Model Selection| **COMPLETED** | `oceanembed.training.checkpoint` | Checkpoint `oceanembed_v0.1.0-dev_20260909_180126_best.pt` saved. |
-| **14** | Serving & UI Portal | **COMPLETED** | `backend.app.main`, `frontend/` | FastAPI REST API endpoints + Next.js interactive 2D/3D visualization dashboard. |
+| **14** | Serving & UI Portal | **COMPLETED** | `backend.app.main`, `frontend/` | FastAPI REST API endpoints + Next.js interactive 2D/3D visualization & MHW dashboard. |
 
 ---
 

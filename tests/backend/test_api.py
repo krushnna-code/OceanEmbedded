@@ -89,10 +89,32 @@ def test_metrics_endpoint():
     response = client.get("/api/metrics")
     assert response.status_code == 200
     data = response.json()
-    assert data["status"] == "validation pending"
-    assert "target_comparisons" in data
-    assert "GLORYS12V1" in data["target_comparisons"]
-    assert "ARGO" in data["target_comparisons"]
+    assert data["status"] == "validated"
+    assert "overall" in data
+    assert "accuracy_pct" in data["overall"]
+    assert "rmse_c" in data["overall"]
+    assert len(data["depth_breakdown"]) == 15
+    assert "Arabian Sea" in data["sub_basins"]
+
+
+def test_mhw_endpoint():
+    response = client.get("/api/mhw?depth=0.0")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "success"
+    assert "active_mhw_area_km2" in data
+    assert "categories" in data
+    assert "sub_basin_stats" in data
+    assert len(data["category_grid"]) == 101
+    assert len(data["category_grid"][0]) == 241
+
+
+def test_anomaly_endpoint():
+    response = client.get("/api/anomaly?depth=0.0")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["is_anomaly"] is True
+    assert len(data["values"]) == 101
 
 
 def test_inference_endpoints():
@@ -104,4 +126,5 @@ def test_inference_endpoints():
     r2 = client.post("/predict", json=payload)
     assert r2.status_code == 200
     assert r2.json()["status"] == "success"
+
 

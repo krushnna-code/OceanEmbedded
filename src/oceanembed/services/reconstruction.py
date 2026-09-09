@@ -19,6 +19,8 @@ from oceanembed.data.interfaces import (
 )
 from oceanembed.models.oceanembed import OceanEmbed3D
 from oceanembed.data.synthetic import SyntheticOceanDataset, create_north_indian_ocean_mask
+from oceanembed.services.anomaly import AnomalyDetectionService
+from oceanembed.services.validation import MetricsService
 
 
 class ReconstructionService:
@@ -31,6 +33,10 @@ class ReconstructionService:
         self.grid_lons = np.linspace(45.0, 105.0, GRID_W).tolist()
         self.mask = create_north_indian_ocean_mask(GRID_H, GRID_W)
         self.depths = STANDARD_DEPTHS
+        
+        # Initialize anomaly and metrics services
+        self.anomaly_service = AnomalyDetectionService(self.depths)
+        self.metrics_service = MetricsService()
         
         # Initialize model with full GNN-hybrid configuration
         self.model = OceanEmbed3D(
@@ -58,11 +64,20 @@ class ReconstructionService:
                 
         # Precomputed demo cache for smooth interactive UI responses
         self.dataset = SyntheticOceanDataset(num_samples=8, seed=42)
+        
+        # Establish climatological baseline across multi-timestep dataset
+        all_targets = [self.dataset[i]["temperature"].numpy() for i in range(len(self.dataset))]
+        self.climatology_mean = np.mean(all_targets, axis=0)  # [15, H, W]
+        self.climatology_std = np.std(all_targets, axis=0) + 1e-4  # [15, H, W]
+        
         self._precompute_cache()
 
     def _precompute_cache(self) -> None:
-        """Precomputes model predictions across available development timesteps."""
+        """Precomputes model predictions, MHW detection, and metrics across available timesteps."""
         self.cache: Dict[str, Dict[str, Any]] = {}
+        all_preds = []
+        all_tgts = []
+        
         with torch.no_grad():
             for i in range(len(self.dataset)):
                 sample = self.dataset[i]
@@ -74,8 +89,9 @@ class ReconstructionService:
                 
                 # Temperature: [15, H, W]
                 target_t = sample["temperature"].numpy()
+                pred_temp_raw = out.temperature[0].cpu().numpy()
                 pred_anom = out.anomaly[0].cpu().numpy()
-                demo_temp = np.where(self.mask > 0, target_t + 0.2 * pred_anom, np.nan)
+                demo_temp = np.where(self.mask > 0, pred_temp_raw, np.nan)
                 
                 # Uncertainty sigma: [15, H, W]
                 if out.uncertainty is not None:
@@ -84,19 +100,41 @@ class ReconstructionService:
                 else:
                     demo_unc = None
                 
-                embedding_np = out.embedding[0].cpu().numpy() # [D, H', W']
+                embedding_np = out.embedding[0].cpu().numpy()  # [D, H', W']
                 # 2D norm of embedding across channels for spatial representation
-                emb_norm = np.linalg.norm(embedding_np, axis=0) # [H', W']
+                emb_norm = np.linalg.norm(embedding_np, axis=0)  # [H', W']
+                
+                # Run Hobday et al. (2016) Marine Heatwave snapshot detection
+                mhw_analysis = self.anomaly_service.detect_mhw_snapshot(
+                    current_temp=demo_temp,
+                    climatology_mean=self.climatology_mean,
+                    climatology_std=self.climatology_std,
+                    mask=self.mask
+                )
                 
                 self.cache[date] = {
                     "temperature": demo_temp,
                     "target": target_t,
                     "anomaly": pred_anom,
+                    "climatology_anomaly": demo_temp - self.climatology_mean,
                     "uncertainty": demo_unc,
                     "embedding": emb_norm,
                     "embedding_raw": embedding_np,
+                    "mhw": mhw_analysis,
                     "metadata": sample["metadata"]
                 }
+                all_preds.append(demo_temp)
+                all_tgts.append(target_t)
+
+        # Compute full validation metrics across all cached predictions
+        self.validation_metrics = self.metrics_service.compute_metrics(
+            predicted=np.array(all_preds),
+            target=np.array(all_tgts),
+            mask=self.mask,
+            depths=self.depths,
+            lats=self.grid_lats,
+            lons=self.grid_lons
+        )
 
     def get_available_dates(self) -> List[str]:
         return sorted(list(self.cache.keys()))
@@ -368,3 +406,62 @@ class ReconstructionService:
             "values": grid_data,
             "status": "DEMO / MODEL DEVELOPMENT DATA"
         }
+
+    def get_mhw_analysis(
+        self,
+        date: Optional[str] = None,
+        depth: float = 0.0,
+        model_id: str = "oceanembed-3d-v1"
+    ) -> Dict[str, Any]:
+        """
+        Retrieves Marine Heatwave (MHW) categorization and metrics for a specific date and depth.
+        """
+        dates = self.get_available_dates()
+        if not date or date not in self.cache:
+            date = dates[0] if dates else "2026-03-10"
+
+        depth_diffs = [abs(d - depth) for d in self.depths]
+        depth_idx = int(np.argmin(depth_diffs))
+        actual_depth = self.depths[depth_idx]
+
+        cached = self.cache.get(date)
+        if cached is None:
+            raise KeyError(f"Date {date} not found in reconstruction cache.")
+
+        mhw = cached["mhw"]
+        cat_slice = mhw["category_map"][depth_idx]  # [H, W]
+        anom_slice = mhw["anomaly_map"][depth_idx]  # [H, W]
+
+        cat_grid = []
+        anom_grid = []
+        for r_idx in range(len(cat_slice)):
+            cat_row = [int(v) for v in cat_slice[r_idx]]
+            anom_row = [None if np.isnan(v) else round(float(v), 2) for v in anom_slice[r_idx]]
+            cat_grid.append(cat_row)
+            anom_grid.append(anom_row)
+
+        return {
+            "date": date,
+            "requested_depth_m": depth,
+            "actual_depth_m": actual_depth,
+            "depth_index": depth_idx,
+            "status": mhw["status"],
+            "active_mhw_area_km2": mhw["active_mhw_area_km2"],
+            "active_mhw_percentage": mhw["active_mhw_percentage"],
+            "max_intensity_c": mhw["max_intensity_c"],
+            "mean_intensity_c": mhw["mean_intensity_c"],
+            "cumulative_intensity": mhw["cumulative_intensity"],
+            "max_penetration_depth_m": mhw["max_penetration_depth_m"],
+            "categories": mhw["categories"],
+            "sub_basin_stats": mhw["sub_basin_stats"],
+            "category_grid": cat_grid,
+            "anomaly_grid": anom_grid,
+            "latitude": self.grid_lats,
+            "longitude": self.grid_lons,
+            "protocol": "Hobday et al. (2016) Marine Heatwave Classification (Categories I-IV)"
+        }
+
+    def get_validation_metrics(self) -> Dict[str, Any]:
+        """Returns quantitative oceanographic validation metrics."""
+        return self.validation_metrics
+

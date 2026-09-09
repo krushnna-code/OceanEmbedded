@@ -125,11 +125,81 @@ class ConfigResponseSchema(BaseModel):
     status: str
 
 
+class MHWCategoryStats(BaseModel):
+    none: int
+    category_1_moderate: int
+    category_2_strong: int
+    category_3_severe: int
+    category_4_extreme: int
+
+
+class SubBasinMHWStats(BaseModel):
+    active_cells: int
+    total_cells: int
+    coverage_pct: float
+    mean_intensity_c: float
+    max_intensity_c: float
+
+
+class MHWResponseSchema(BaseModel):
+    date: str
+    requested_depth_m: float
+    actual_depth_m: float
+    depth_index: int
+    status: str
+    active_mhw_area_km2: float
+    active_mhw_percentage: float
+    max_intensity_c: float
+    mean_intensity_c: float
+    cumulative_intensity: float
+    max_penetration_depth_m: float
+    categories: MHWCategoryStats
+    sub_basin_stats: Dict[str, SubBasinMHWStats]
+    category_grid: List[List[int]]
+    anomaly_grid: List[List[Optional[float]]]
+    latitude: List[float]
+    longitude: List[float]
+    protocol: str
+
+
+class DepthMetricSchema(BaseModel):
+    depth_m: float
+    mae_c: float
+    rmse_c: float
+    bias_c: float
+    r2_score: float
+    correlation: float
+    accuracy_pct: float
+    target_mean_c: float
+    pred_mean_c: float
+
+
+class OverallMetricsSchema(BaseModel):
+    rmse_c: float
+    mae_c: float
+    bias_c: float
+    r2_score: float
+    correlation: float
+    accuracy_pct: float
+    total_valid_points: int
+
+
+class RegionalMetricSchema(BaseModel):
+    mae_c: float
+    rmse_c: float
+    bias_c: float
+    r2_score: float
+    correlation: float
+    accuracy_pct: float
+    sample_count: int
+
+
 class MetricsResponseSchema(BaseModel):
     status: str
-    message: str
-    validation_phase: str
-    target_comparisons: Dict[str, str]
-    available_metrics: List[str]
-    note: str
+    overall: OverallMetricsSchema
+    depth_breakdown: List[DepthMetricSchema]
+    sub_basins: Dict[str, RegionalMetricSchema]
+    target_dataset: str
+    protocol: str
+
 

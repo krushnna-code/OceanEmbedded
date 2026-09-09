@@ -130,12 +130,80 @@ export interface EmbeddingData {
   status: string;
 }
 
+export interface MHWCategoryStats {
+  none: number;
+  category_1_moderate: number;
+  category_2_strong: number;
+  category_3_severe: number;
+  category_4_extreme: number;
+}
+
+export interface SubBasinMHWStats {
+  active_cells: number;
+  total_cells: number;
+  coverage_pct: number;
+  mean_intensity_c: number;
+  max_intensity_c: number;
+}
+
+export interface MHWData {
+  date: string;
+  requested_depth_m: number;
+  actual_depth_m: number;
+  depth_index: number;
+  status: string;
+  active_mhw_area_km2: number;
+  active_mhw_percentage: number;
+  max_intensity_c: number;
+  mean_intensity_c: number;
+  cumulative_intensity: number;
+  max_penetration_depth_m: number;
+  categories: MHWCategoryStats;
+  sub_basin_stats: Record<string, SubBasinMHWStats>;
+  category_grid: number[][];
+  anomaly_grid: (number | null)[][];
+  latitude: number[];
+  longitude: number[];
+  protocol: string;
+}
+
+export interface DepthMetric {
+  depth_m: number;
+  mae_c: number;
+  rmse_c: number;
+  bias_c: number;
+  r2_score: number;
+  correlation: number;
+  accuracy_pct: number;
+  target_mean_c: number;
+  pred_mean_c: number;
+}
+
+export interface RegionalMetric {
+  mae_c: number;
+  rmse_c: number;
+  bias_c: number;
+  r2_score: number;
+  correlation: number;
+  accuracy_pct: number;
+  sample_count: number;
+}
+
 export interface MetricsData {
   status: string;
-  message: string;
-  validation_phase: string;
-  target_comparisons: Record<string, string>;
-  available_metrics: string[];
-  note: string;
+  overall: {
+    rmse_c: number;
+    mae_c: number;
+    bias_c: number;
+    r2_score: number;
+    correlation: number;
+    accuracy_pct: number;
+    total_valid_points: number;
+  };
+  depth_breakdown: DepthMetric[];
+  sub_basins: Record<string, RegionalMetric>;
+  target_dataset: string;
+  protocol: string;
 }
+
 

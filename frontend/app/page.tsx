@@ -7,6 +7,8 @@ import { OceanMap2D } from '@/components/map/OceanMap2D';
 import { ProfilePanel } from '@/components/profile/ProfilePanel';
 import { OceanVolume3D } from '@/components/ocean3d/OceanVolume3D';
 import { ModelInfoPanel } from '@/components/info/ModelInfoPanel';
+import { MHWPanel } from '@/components/mhw/MHWPanel';
+import { ValidationMetricsPanel } from '@/components/metrics/ValidationMetricsPanel';
 
 import {
   ConfigData,
@@ -79,7 +81,7 @@ export default function Home() {
     async function loadMap() {
       setLoadingMap(true);
       try {
-        const data = await fetchReconstructionMap(selectedDate, selectedDepth, isAnomaly);
+        const data = await fetchReconstructionMap(selectedDate, selectedDepth, selectedModel, isAnomaly);
         setMapData(data);
       } catch (err) {
         console.error('Error fetching map:', err);
@@ -88,14 +90,14 @@ export default function Home() {
       }
     }
     loadMap();
-  }, [selectedDate, selectedDepth, isAnomaly]);
+  }, [selectedDate, selectedDepth, selectedModel, isAnomaly]);
 
   // Fetch Vertical Profile Data on Coordinate or Date change
   useEffect(() => {
     async function loadProfile() {
       setLoadingProfile(true);
       try {
-        const data = await fetchVerticalProfile(selectedLat, selectedLon, selectedDate);
+        const data = await fetchVerticalProfile(selectedLat, selectedLon, selectedDate, selectedModel);
         setProfileData(data);
       } catch (err) {
         console.error('Error fetching profile:', err);
@@ -104,14 +106,14 @@ export default function Home() {
       }
     }
     loadProfile();
-  }, [selectedLat, selectedLon, selectedDate]);
+  }, [selectedLat, selectedLon, selectedDate, selectedModel]);
 
   // Fetch 3D Volume Data on Date change
   useEffect(() => {
     async function loadVolume() {
       setLoadingVolume(true);
       try {
-        const data = await fetchVolume3D(selectedDate, 4);
+        const data = await fetchVolume3D(selectedDate, selectedModel, 4);
         setVolumeData(data);
       } catch (err) {
         console.error('Error fetching 3D volume:', err);
@@ -120,7 +122,7 @@ export default function Home() {
       }
     }
     loadVolume();
-  }, [selectedDate]);
+  }, [selectedDate, selectedModel]);
 
   // Synchronized point selection handler
   const handleSelectPoint = (lat: number, lon: number) => {
@@ -266,31 +268,9 @@ export default function Home() {
           </div>
         )}
 
-        {/* Tab 5: Marine Heatwave (MHW) Monitoring Placeholder */}
+        {/* Tab 5: Marine Heatwave (MHW) Monitoring Phase 2 */}
         {activeTab === 'mhw' && (
-          <div className="gov-card">
-            <div className="gov-card-header">
-              <div className="gov-card-title">
-                <span>Marine Heatwave (MHW) &amp; Subsurface Thermal Anomaly Monitoring</span>
-              </div>
-              <span className="status-tag" style={{ background: '#fef3c7', color: '#b45309', border: '1px solid #fde68a' }}>
-                COMING IN NEXT INTEGRATION PHASE
-              </span>
-            </div>
-            <div className="gov-card-body" style={{ textAlign: 'center', padding: '3.5rem 1.5rem' }}>
-              <div style={{ maxWidth: '600px', margin: '0 auto' }}>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#0f2744', marginBottom: '0.6rem' }}>
-                  Subsurface Extreme Thermal Event Tracking
-                </h3>
-                <p style={{ fontSize: '0.82rem', color: '#475569', lineHeight: 1.6, marginBottom: '1.25rem' }}>
-                  Marine Heatwave (MHW) categorization requires multi-decadal baseline climatologies (e.g. 1982–2011 90th percentile thresholds). Detection of subsurface thermal anomalies will be integrated in Phase 2 once the full 14-step regridded historical climatology is connected.
-                </p>
-                <div style={{ display: 'inline-block', background: '#f1f5f9', padding: '0.6rem 1.25rem', borderRadius: '4px', fontSize: '0.78rem', fontWeight: 600, color: '#1e3a5f', border: '1px solid #cbd5e1' }}>
-                  Scheduled: Integration Phase 2 (Climatology &amp; Anomaly Detection Service)
-                </div>
-              </div>
-            </div>
-          </div>
+          <MHWPanel selectedDate={selectedDate} depths={depths} />
         )}
 
         {/* Tab 6: Cyclone Heat-Content Tool Placeholder */}
@@ -325,53 +305,9 @@ export default function Home() {
           <ModelInfoPanel metadata={metadata} />
         )}
 
-        {/* Tab 8: Validation Metrics Placeholder per Section 28, 30 & 38 */}
+        {/* Tab 8: Independent Validation Metrics Dashboard */}
         {activeTab === 'metrics' && (
-          <div className="gov-card">
-            <div className="gov-card-header">
-              <div className="gov-card-title">
-                <BarChart2 size={16} color="#0284c7" />
-                <span>Independent Oceanographic Validation</span>
-              </div>
-              <span className="status-tag">STATUS: VALIDATION PENDING</span>
-            </div>
-            <div className="gov-card-body" style={{ textAlign: 'center', padding: '3rem 1.5rem' }}>
-              <div style={{ maxWidth: '620px', margin: '0 auto' }}>
-                <div style={{
-                  display: 'inline-flex',
-                  padding: '1rem',
-                  background: '#f8fafc',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '50%',
-                  marginBottom: '1rem'
-                }}>
-                  <BarChart2 size={36} color="#0284c7" />
-                </div>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#0f2744', marginBottom: '0.6rem' }}>
-                  Independent ARGO &amp; GLORYS Validation Pipeline
-                </h3>
-                <p style={{ fontSize: '0.82rem', color: '#475569', lineHeight: 1.6, marginBottom: '1.25rem' }}>
-                  In adherence to the core scientific protocol (Section 28, 38 &amp; 48), empirical validation metrics
-                  (RMSE, MAE, correlation, depth-stratified thermal bias) are not fabricated during model development.
-                  GLORYS12V1 is a dense reanalysis training target (explicitly NOT ground truth), while ARGO float profiles
-                  are strictly held out for independent evaluation. The validation suite will be executed once the matched
-                  multi-product dataset is harmonized.
-                </p>
-                <div style={{
-                  display: 'inline-block',
-                  background: '#f1f5f9',
-                  padding: '0.6rem 1.25rem',
-                  borderRadius: '4px',
-                  fontSize: '0.78rem',
-                  fontWeight: 600,
-                  color: '#1e3a5f',
-                  border: '1px solid #cbd5e1'
-                }}>
-                  Layer 4 Validation Engine &middot; Status: Validation Pending
-                </div>
-              </div>
-            </div>
-          </div>
+          <ValidationMetricsPanel />
         )}
       </main>
 

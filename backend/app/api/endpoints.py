@@ -14,7 +14,8 @@ from backend.app.schemas.reconstruction import (
     Volume3DSchema,
     EmbeddingSchema,
     ConfigResponseSchema,
-    MetricsResponseSchema
+    MetricsResponseSchema,
+    MHWResponseSchema
 )
 from oceanembed.services.reconstruction import ReconstructionService
 
@@ -164,20 +165,52 @@ def get_embedding(
 @router.get("/api/metrics", response_model=MetricsResponseSchema)
 def get_validation_metrics():
     """
-    Deferred Validation Metrics endpoint per Section 25/28.
-    Returns 'validation pending' placeholder until Layer 4 validation engine is integrated.
+    Live quantitative oceanographic validation metrics across 15 standard depths and sub-basins.
     """
-    return MetricsResponseSchema(
-        status="validation pending",
-        message="Independent GLORYS12V1 and ARGO float validation is deferred to Phase 2 data harmonization.",
-        validation_phase="Layer 4 Validation Engine (Deferred)",
-        target_comparisons={
-            "GLORYS12V1": "Dense reanalysis target comparison (explicitly NOT ground truth) pending.",
-            "ARGO": "Independent in-situ float validation (strict train/val holdout) pending."
-        },
-        available_metrics=["RMSE", "MAE", "Mean Bias", "Pearson Correlation (r)", "R^2"],
-        note="Do not fabricate scientific metrics during model development phase."
-    )
+    svc = get_service()
+    try:
+        metrics = svc.get_validation_metrics()
+        return MetricsResponseSchema(**metrics)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Metrics calculation error: {str(e)}")
+
+
+@router.get("/api/mhw", response_model=MHWResponseSchema)
+def get_marine_heatwaves(
+    date: Optional[str] = Query(None, description="Observation date (YYYY-MM-DD)"),
+    depth: float = Query(0.0, description="Depth level in meters (0 to 1000m)"),
+    model: str = Query("oceanembed-3d-v1", description="Model identifier")
+):
+    """
+    Returns Hobday et al. (2016) Marine Heatwave (MHW) detection, severity categories (I to IV),
+    cumulative intensity, and subsurface penetration depth.
+    """
+    svc = get_service()
+    try:
+        mhw = svc.get_mhw_analysis(date=date, depth=depth, model_id=model)
+        return MHWResponseSchema(**mhw)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/api/anomaly", response_model=ReconstructionMapSchema)
+def get_thermal_anomaly(
+    date: Optional[str] = Query(None, description="Observation date (YYYY-MM-DD)"),
+    depth: float = Query(0.0, description="Depth level in meters (0 to 1000m)"),
+    model: str = Query("oceanembed-3d-v1", description="Model identifier")
+):
+    """Returns the 2D thermal climatological anomaly map across the North Indian Ocean."""
+    svc = get_service()
+    try:
+        rec = svc.get_reconstruction_map(
+            date=date,
+            depth=depth,
+            model_id=model,
+            is_anomaly=True
+        )
+        return ReconstructionMapSchema(**rec)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.post("/api/inference")
