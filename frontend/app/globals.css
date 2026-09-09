@@ -1,0 +1,162 @@
+:root {
+  --bg-main: #f8fafc;
+  --bg-card: #ffffff;
+  --bg-muted: #f1f5f9;
+  --text-main: #0f172a;
+  --text-muted: #475569;
+  --border-light: #e2e8f0;
+  --border-dark: #cbd5e1;
+  --navy-primary: #0f2744;
+  --navy-secondary: #1e3a5f;
+  --ocean-blue: #0284c7;
+  --ocean-blue-hover: #0369a1;
+  --teal-accent: #0d9488;
+  --warning-bg: #fffbeb;
+  --warning-border: #fde68a;
+  --warning-text: #92400e;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--bg-main);
+  color: var(--text-main);
+  font-family: var(--font-sans);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+/* Government scientific portal style utilities */
+.portal-container {
+  max-width: 1560px;
+  margin: 0 auto;
+  padding: 0 1.25rem;
+}
+
+.official-banner {
+  background-color: #0f172a;
+  color: #94a3b8;
+  font-size: 0.75rem;
+  padding: 0.35rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #1e293b;
+}
+
+.status-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background-color: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+  padding: 0.2rem 0.55rem;
+  border-radius: 3px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.gov-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.gov-card-header {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border-light);
+  background: #f8fafc;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.gov-card-title {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--navy-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.gov-card-body {
+  padding: 1rem;
+}
+
+/* Control select inputs */
+.gov-select {
+  padding: 0.45rem 0.75rem;
+  font-size: 0.85rem;
+  background: #ffffff;
+  border: 1px solid var(--border-dark);
+  border-radius: 3px;
+  color: var(--text-main);
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.gov-select:focus {
+  border-color: var(--ocean-blue);
+  box-shadow: 0 0 0 1px var(--ocean-blue);
+}
+
+/* Interactive Map Canvas */
+.canvas-map-container {
+  position: relative;
+  width: 100%;
+  height: 480px;
+  background: #e2e8f0;
+  border: 1px solid var(--border-dark);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+/* 3D View Container */
+.three-canvas-container {
+  width: 100%;
+  height: 520px;
+  background: #090d16;
+  border: 1px solid #1e293b;
+  border-radius: 3px;
+  position: relative;
+}
+
+/* Tab Navigation */
+.nav-tab {
+  padding: 0.6rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #64748b;
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s ease;
+}
+
+.nav-tab:hover {
+  color: var(--navy-primary);
+}
+
+.nav-tab.active {
+  color: var(--ocean-blue);
+  border-bottom-color: var(--ocean-blue);
+}
