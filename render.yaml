@@ -1,0 +1,30 @@
+services:
+  # ---------------------------------------------------------------------------
+  # 1. FastAPI Backend Web Service
+  # ---------------------------------------------------------------------------
+  - type: web
+    name: oceanembed-backend
+    runtime: python
+    buildCommand: "pip install -r requirements.txt && pip install -e ."
+    startCommand: "python -m uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.12
+
+  # ---------------------------------------------------------------------------
+  # 2. Next.js Scientific Dashboard Frontend
+  # ---------------------------------------------------------------------------
+  - type: web
+    name: oceanembed-frontend
+    runtime: node
+    rootDir: frontend
+    buildCommand: "npm install && npm run build"
+    startCommand: "npm start"
+    envVars:
+      - key: NODE_VERSION
+        value: 18.17.0
+      - key: BACKEND_URL
+        fromService:
+          type: web
+          name: oceanembed-backend
+          property: host
