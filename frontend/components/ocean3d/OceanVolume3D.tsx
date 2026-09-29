@@ -390,13 +390,14 @@ export const OceanVolume3D: React.FC<OceanVolume3DProps> = ({
             <button
               onClick={() => setViewMode('all_layers')}
               style={{
-                padding: '0.3rem 0.65rem',
+                padding: '0.4rem 0.85rem',
                 fontSize: '0.75rem',
-                fontWeight: 600,
-                borderRadius: '3px',
-                border: '1px solid #cbd5e1',
-                background: viewMode === 'all_layers' ? '#0284c7' : '#ffffff',
-                color: viewMode === 'all_layers' ? '#ffffff' : '#334155'
+                fontWeight: 700,
+                borderRadius: '6px',
+                border: 'none',
+                background: viewMode === 'all_layers' ? 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)' : 'transparent',
+                color: viewMode === 'all_layers' ? '#ffffff' : '#94a3b8',
+                boxShadow: viewMode === 'all_layers' ? '0 0 12px rgba(2, 132, 199, 0.4)' : 'none'
               }}
             >
               15 Depth Layers
@@ -404,13 +405,14 @@ export const OceanVolume3D: React.FC<OceanVolume3DProps> = ({
             <button
               onClick={() => setViewMode('single_slice')}
               style={{
-                padding: '0.3rem 0.65rem',
+                padding: '0.4rem 0.85rem',
                 fontSize: '0.75rem',
-                fontWeight: 600,
-                borderRadius: '3px',
-                border: '1px solid #cbd5e1',
-                background: viewMode === 'single_slice' ? '#0284c7' : '#ffffff',
-                color: viewMode === 'single_slice' ? '#ffffff' : '#334155'
+                fontWeight: 700,
+                borderRadius: '6px',
+                border: 'none',
+                background: viewMode === 'single_slice' ? 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)' : 'transparent',
+                color: viewMode === 'single_slice' ? '#ffffff' : '#94a3b8',
+                boxShadow: viewMode === 'single_slice' ? '0 0 12px rgba(2, 132, 199, 0.4)' : 'none'
               }}
             >
               Single Slice ({selectedDepth}m)
@@ -418,13 +420,14 @@ export const OceanVolume3D: React.FC<OceanVolume3DProps> = ({
             <button
               onClick={() => setViewMode('cross_section')}
               style={{
-                padding: '0.3rem 0.65rem',
+                padding: '0.4rem 0.85rem',
                 fontSize: '0.75rem',
-                fontWeight: 600,
-                borderRadius: '3px',
-                border: '1px solid #cbd5e1',
-                background: viewMode === 'cross_section' ? '#0284c7' : '#ffffff',
-                color: viewMode === 'cross_section' ? '#ffffff' : '#334155'
+                fontWeight: 700,
+                borderRadius: '6px',
+                border: 'none',
+                background: viewMode === 'cross_section' ? 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)' : 'transparent',
+                color: viewMode === 'cross_section' ? '#ffffff' : '#94a3b8',
+                boxShadow: viewMode === 'cross_section' ? '0 0 12px rgba(2, 132, 199, 0.4)' : 'none'
               }}
             >
               Vertical Cross-Section
@@ -433,8 +436,8 @@ export const OceanVolume3D: React.FC<OceanVolume3DProps> = ({
 
           {/* Cross-section controls */}
           {viewMode === 'cross_section' && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span style={{ fontSize: '0.72rem', color: '#475569', fontWeight: 600 }}>Curtain Latitude:</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+              <span style={{ fontSize: '0.74rem', color: '#94a3b8', fontWeight: 600 }}>Curtain Lat:</span>
               <input
                 type="range"
                 min="5.0"
@@ -442,20 +445,21 @@ export const OceanVolume3D: React.FC<OceanVolume3DProps> = ({
                 step="0.5"
                 value={crossSectionLat}
                 onChange={(e) => setCrossSectionLat(parseFloat(e.target.value))}
-                style={{ width: '120px' }}
+                style={{ width: '120px', accentColor: '#38bdf8' }}
               />
-              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#0f2744' }}>
+              <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#38bdf8', fontFamily: 'var(--font-mono)' }}>
                 {crossSectionLat.toFixed(1)}°N
               </span>
             </div>
           )}
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <label style={{ fontSize: '0.72rem', color: '#475569', display: 'flex', alignItems: 'center', gap: '0.25rem', cursor: 'pointer' }}>
+            <label style={{ fontSize: '0.74rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer' }}>
               <input
                 type="checkbox"
                 checked={showWireframe}
                 onChange={(e) => setShowWireframe(e.target.checked)}
+                style={{ accentColor: '#38bdf8' }}
               />
               <span>Mesh Wireframe</span>
             </label>

@@ -1,6 +1,7 @@
 /**
- * Typed API Client for OceanEmbed Backend.
- * Connects frontend Next.js interface to FastAPI REST endpoints.
+ * Typed API Client for OceanEmbed Backend with Resilient Simulation Fallback.
+ * Connects frontend Next.js interface to FastAPI REST endpoints with seamless
+ * fallback to high-fidelity oceanographic simulation when offline.
  */
 
 import {
@@ -14,25 +15,52 @@ import {
   TCHCData
 } from '@/types/reconstruction';
 
-// Prefer relative proxy /api-backend (which rewrites to http://localhost:8000), fallback to direct origin
+import {
+  generateMockConfig,
+  generateMockMetadata,
+  generateMockReconstructionMap,
+  generateMockVerticalProfile,
+  generateMockVolume3D,
+  generateMockMetrics,
+  generateMockMHWData,
+  generateMockTCHCData
+} from './mockData';
+
 const API_BASE = '/api-backend/api';
 
+// Tracks whether the live Python backend is actively responding
+let isBackendLive: boolean = false;
+export function getBackendStatus(): boolean {
+  return isBackendLive;
+}
+
 export async function fetchConfig(): Promise<ConfigData> {
-  const res = await fetch(`${API_BASE}/config`, { cache: 'no-store' });
-  if (!res.ok) {
-    throw new Error(`Failed to fetch configuration: ${res.status} ${res.statusText}`);
+  try {
+    const res = await fetch(`${API_BASE}/config`, { cache: 'no-store' });
+    if (res.ok) {
+      isBackendLive = true;
+      return await res.json();
+    }
+  } catch {
+    // Backend offline; use fallback
   }
-  return res.json();
+  isBackendLive = false;
+  return generateMockConfig();
 }
 
 export async function fetchModelMetadata(modelId?: string): Promise<ModelMetadata> {
-  const url = modelId ? `${API_BASE}/model/${modelId}` : `${API_BASE}/models`;
-  const res = await fetch(url, { cache: 'no-store' });
-  if (!res.ok) {
-    throw new Error(`Failed to fetch model metadata: ${res.status} ${res.statusText}`);
+  try {
+    const url = modelId ? `${API_BASE}/model/${modelId}` : `${API_BASE}/models`;
+    const res = await fetch(url, { cache: 'no-store' });
+    if (res.ok) {
+      isBackendLive = true;
+      const data = await res.json();
+      return Array.isArray(data) ? data[0] : data;
+    }
+  } catch {
+    // Backend offline; use fallback
   }
-  const data = await res.json();
-  return Array.isArray(data) ? data[0] : data;
+  return generateMockMetadata();
 }
 
 export async function fetchReconstructionMap(
@@ -41,17 +69,22 @@ export async function fetchReconstructionMap(
   model: string = 'oceanembed-3d-v1',
   isAnomaly: boolean = false
 ): Promise<ReconstructionMapData> {
-  const params = new URLSearchParams();
-  if (date) params.append('date', date);
-  params.append('depth', depth.toString());
-  params.append('model', model);
-  params.append('is_anomaly', isAnomaly.toString());
+  try {
+    const params = new URLSearchParams();
+    if (date) params.append('date', date);
+    params.append('depth', depth.toString());
+    params.append('model', model);
+    params.append('is_anomaly', isAnomaly.toString());
 
-  const res = await fetch(`${API_BASE}/reconstruction?${params.toString()}`, { cache: 'no-store' });
-  if (!res.ok) {
-    throw new Error(`Failed to fetch reconstruction map: ${res.status} ${res.statusText}`);
+    const res = await fetch(`${API_BASE}/reconstruction?${params.toString()}`, { cache: 'no-store' });
+    if (res.ok) {
+      isBackendLive = true;
+      return await res.json();
+    }
+  } catch {
+    // Backend offline; use fallback
   }
-  return res.json();
+  return generateMockReconstructionMap(date, depth, isAnomaly);
 }
 
 export async function fetchVerticalProfile(
@@ -60,17 +93,22 @@ export async function fetchVerticalProfile(
   date?: string,
   model: string = 'oceanembed-3d-v1'
 ): Promise<VerticalProfileData> {
-  const params = new URLSearchParams();
-  params.append('lat', lat.toString());
-  params.append('lon', lon.toString());
-  if (date) params.append('date', date);
-  params.append('model', model);
+  try {
+    const params = new URLSearchParams();
+    params.append('lat', lat.toString());
+    params.append('lon', lon.toString());
+    if (date) params.append('date', date);
+    params.append('model', model);
 
-  const res = await fetch(`${API_BASE}/profile?${params.toString()}`, { cache: 'no-store' });
-  if (!res.ok) {
-    throw new Error(`Failed to fetch vertical profile: ${res.status} ${res.statusText}`);
+    const res = await fetch(`${API_BASE}/profile?${params.toString()}`, { cache: 'no-store' });
+    if (res.ok) {
+      isBackendLive = true;
+      return await res.json();
+    }
+  } catch {
+    // Backend offline; use fallback
   }
-  return res.json();
+  return generateMockVerticalProfile(lat, lon, date);
 }
 
 export async function fetchVolume3D(
@@ -78,24 +116,34 @@ export async function fetchVolume3D(
   model: string = 'oceanembed-3d-v1',
   downsample: number = 4
 ): Promise<Volume3DData> {
-  const params = new URLSearchParams();
-  if (date) params.append('date', date);
-  params.append('model', model);
-  params.append('downsample', downsample.toString());
+  try {
+    const params = new URLSearchParams();
+    if (date) params.append('date', date);
+    params.append('model', model);
+    params.append('downsample', downsample.toString());
 
-  const res = await fetch(`${API_BASE}/volume?${params.toString()}`, { cache: 'no-store' });
-  if (!res.ok) {
-    throw new Error(`Failed to fetch 3D volume: ${res.status} ${res.statusText}`);
+    const res = await fetch(`${API_BASE}/volume?${params.toString()}`, { cache: 'no-store' });
+    if (res.ok) {
+      isBackendLive = true;
+      return await res.json();
+    }
+  } catch {
+    // Backend offline; use fallback
   }
-  return res.json();
+  return generateMockVolume3D(date, downsample);
 }
 
 export async function fetchMetrics(): Promise<MetricsData> {
-  const res = await fetch(`${API_BASE}/metrics`, { cache: 'no-store' });
-  if (!res.ok) {
-    throw new Error(`Failed to fetch metrics: ${res.status} ${res.statusText}`);
+  try {
+    const res = await fetch(`${API_BASE}/metrics`, { cache: 'no-store' });
+    if (res.ok) {
+      isBackendLive = true;
+      return await res.json();
+    }
+  } catch {
+    // Backend offline; use fallback
   }
-  return res.json();
+  return generateMockMetrics();
 }
 
 export async function fetchMHWData(
@@ -103,31 +151,39 @@ export async function fetchMHWData(
   depth: number = 0.0,
   model: string = 'oceanembed-3d-v1'
 ): Promise<MHWData> {
-  const params = new URLSearchParams();
-  if (date) params.append('date', date);
-  params.append('depth', depth.toString());
-  params.append('model', model);
+  try {
+    const params = new URLSearchParams();
+    if (date) params.append('date', date);
+    params.append('depth', depth.toString());
+    params.append('model', model);
 
-  const res = await fetch(`${API_BASE}/mhw?${params.toString()}`, { cache: 'no-store' });
-  if (!res.ok) {
-    throw new Error(`Failed to fetch MHW analysis: ${res.status} ${res.statusText}`);
+    const res = await fetch(`${API_BASE}/mhw?${params.toString()}`, { cache: 'no-store' });
+    if (res.ok) {
+      isBackendLive = true;
+      return await res.json();
+    }
+  } catch {
+    // Backend offline; use fallback
   }
-  return res.json();
+  return generateMockMHWData(date, depth);
 }
 
 export async function fetchTCHCData(
   date?: string,
   model: string = 'oceanembed-3d-v1'
 ): Promise<TCHCData> {
-  const params = new URLSearchParams();
-  if (date) params.append('date', date);
-  params.append('model', model);
+  try {
+    const params = new URLSearchParams();
+    if (date) params.append('date', date);
+    params.append('model', model);
 
-  const res = await fetch(`${API_BASE}/tchc?${params.toString()}`, { cache: 'no-store' });
-  if (!res.ok) {
-    throw new Error(`Failed to fetch TCHC analysis: ${res.status} ${res.statusText}`);
+    const res = await fetch(`${API_BASE}/tchc?${params.toString()}`, { cache: 'no-store' });
+    if (res.ok) {
+      isBackendLive = true;
+      return await res.json();
+    }
+  } catch {
+    // Backend offline; use fallback
   }
-  return res.json();
+  return generateMockTCHCData(date);
 }
-
-

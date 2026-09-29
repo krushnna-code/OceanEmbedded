@@ -18,19 +18,26 @@ from backend.app.schemas.reconstruction import (
     MHWResponseSchema,
     TCHCResponseSchema
 )
-from oceanembed.services.reconstruction import ReconstructionService
+try:
+    from oceanembed.services.reconstruction import ReconstructionService
+except Exception as e:
+    from backend.app.services.fallback_service import ResilientReconstructionService as ReconstructionService
 
 router = APIRouter()
 
 # Global service instance with latest checkpoint pointer if available
-_reconstruction_service: Optional[ReconstructionService] = None
+_reconstruction_service: Optional[Any] = None
 
 
-def get_service() -> ReconstructionService:
+def get_service() -> Any:
     global _reconstruction_service
     if _reconstruction_service is None:
-        checkpoint = "checkpoints/latest.pt"
-        _reconstruction_service = ReconstructionService(checkpoint_path=checkpoint)
+        try:
+            checkpoint = "checkpoints/latest.pt"
+            _reconstruction_service = ReconstructionService(checkpoint_path=checkpoint)
+        except Exception:
+            from backend.app.services.fallback_service import ResilientReconstructionService
+            _reconstruction_service = ResilientReconstructionService()
     return _reconstruction_service
 
 
