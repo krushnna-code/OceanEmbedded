@@ -12,7 +12,8 @@ import {
   Flame,
   Disc,
   Radio,
-  Sparkles
+  Sparkles,
+  Box
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -34,6 +35,7 @@ export const Header: React.FC<HeaderProps> = ({
     { id: 'mhw', label: 'Marine Heatwaves', icon: Flame, badge: 'Phase 2' },
     { id: 'cyclone', label: 'Cyclone Heat Content', icon: Disc, badge: 'TCHC / D26' },
     { id: 'metrics', label: 'Validation Metrics', icon: BarChart3, badge: 'Argo Match' },
+    { id: 'cutaway3d', label: '3D Cutaway Model', icon: Box, badge: 'GLORYS' },
     { id: 'model_info', label: 'Architecture & Docs', icon: Info },
   ];
 

@@ -10,6 +10,7 @@ import { ModelInfoPanel } from '@/components/info/ModelInfoPanel';
 import { MHWPanel } from '@/components/mhw/MHWPanel';
 import { ValidationMetricsPanel } from '@/components/metrics/ValidationMetricsPanel';
 import { CycloneHeatPanel } from '@/components/cyclone/CycloneHeatPanel';
+import { OceanCutaway3D } from '@/components/ocean3d/OceanCutaway3D';
 
 import {
   ModelMetadata,
@@ -325,6 +326,11 @@ export default function Home() {
         {/* Tab 7: Independent Validation Metrics Dashboard */}
         {activeTab === 'metrics' && (
           <ValidationMetricsPanel />
+        )}
+
+        {/* Tab - 3D Cutaway Model */}
+        {activeTab === 'cutaway3d' && (
+          <OceanCutaway3D />
         )}
 
         {/* Tab 8: Model Specifications & Architecture */}

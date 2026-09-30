@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.app.api.endpoints import router
+from backend.app.api.ocean_cutaway import router as ocean_cutaway_router
 
 app = FastAPI(
     title="OceanEmbed - Subsurface Ocean Intelligence API",
@@ -28,6 +29,7 @@ app.add_middleware(
 
 # Attach API endpoints
 app.include_router(router)
+app.include_router(ocean_cutaway_router)
 
 
 if __name__ == "__main__":
